@@ -329,6 +329,7 @@ const stretchedPaths = [
   import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
   import { Flow } from 'three/addons/modifiers/CurveModifier.js';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  import GUI from 'lil-gui';
 
   const container = document.getElementById('three-container');
   
@@ -344,6 +345,7 @@ const stretchedPaths = [
     camera.position.set(0, 20, 50);
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setClearColor(0x111111);
     container.appendChild(renderer.domElement);
@@ -357,14 +359,14 @@ const stretchedPaths = [
 
     // Create a circular path
     const radius = 26;
-    const segments = 1000; // Many points for smooth curve
+    const segments = 200; // Enough for smooth curve
     const curvePoints: THREE.Vector3[] = [];
     
     for (let i = 0; i < segments; i++) {
       const angle = (i / segments) * Math.PI * 2;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
-      const y = Math.sin(angle * 2) * 1; // Gentle wave
+      const y = 0; // Perfectly flat circle
       curvePoints.push(new THREE.Vector3(x, y, z));
     }
     
@@ -378,6 +380,17 @@ const stretchedPaths = [
       color: 0xffffff,
       side: THREE.DoubleSide
     });
+
+    // GUI Controls
+    const params = {
+      rotateX: 0,
+      rotateY: 0,
+      rotateZ: Math.PI, // Makes text upright
+      offsetX: 16,
+      offsetY: 0.4,
+      scale: 0.03,
+      tessellation: 0.5
+    };
 
     // Current flow reference
     let flow: Flow | null = null;
@@ -499,20 +512,21 @@ const stretchedPaths = [
       }
 
       // Scale and position for curve
-      const scaleFactor = 0.03;
-      mergedGeometry.scale(scaleFactor, -scaleFactor, scaleFactor);
+      mergedGeometry.scale(params.scale, -params.scale, params.scale);
       
-      // Rotate to stand upright
-      mergedGeometry.rotateX(-Math.PI / 2);
+      // Rotate using GUI params
+      mergedGeometry.rotateX(params.rotateX);
+      mergedGeometry.rotateY(params.rotateY);
+      mergedGeometry.rotateZ(params.rotateZ);
       
       // Center vertically
-      mergedGeometry.translate(0, 0.4, 0);
+      mergedGeometry.translate(0, params.offsetY, 0);
       
-      // Tessellate for smooth curve bending (max edge length 0.3 units)
-      mergedGeometry = tessellateGeometry(mergedGeometry, 0.3);
+      // Tessellate for smooth curve bending
+      mergedGeometry = tessellateGeometry(mergedGeometry, params.tessellation);
       
       // Offset for curve
-      mergedGeometry.translate(16, 0, 0);
+      mergedGeometry.translate(params.offsetX, 0, 0);
 
       return mergedGeometry;
     }
@@ -639,6 +653,27 @@ const stretchedPaths = [
       renderer.render(scene, camera);
     }
     animate();
+
+    // GUI Setup
+    const gui = new GUI();
+    
+    const rotationFolder = gui.addFolder('Rotation');
+    rotationFolder.add(params, 'rotateX', -Math.PI, Math.PI, 0.01).name('Rotate X').onChange(rebuildGeometry);
+    rotationFolder.add(params, 'rotateY', -Math.PI, Math.PI, 0.01).name('Rotate Y').onChange(rebuildGeometry);
+    rotationFolder.add(params, 'rotateZ', -Math.PI, Math.PI, 0.01).name('Rotate Z').onChange(rebuildGeometry);
+    rotationFolder.open();
+    
+    const positionFolder = gui.addFolder('Position');
+    positionFolder.add(params, 'offsetX', 0, 30, 0.1).name('Offset X').onChange(rebuildGeometry);
+    positionFolder.add(params, 'offsetY', -2, 2, 0.1).name('Offset Y').onChange(rebuildGeometry);
+    positionFolder.add(params, 'scale', 0.01, 0.1, 0.001).name('Scale').onChange(rebuildGeometry);
+    
+    const qualityFolder = gui.addFolder('Quality');
+    qualityFolder.add(params, 'tessellation', 0.1, 2, 0.1).name('Tessellation').onChange(rebuildGeometry);
+    
+    function rebuildGeometry() {
+      updateLogoGeometry(currentPaths);
+    }
 
     // Handle resize
     window.addEventListener('resize', () => {
