@@ -341,7 +341,7 @@ const stretchedPaths = [
     // Three.js setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 5, 10);
+    camera.position.set(0, 20, 50);
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
@@ -356,15 +356,15 @@ const stretchedPaths = [
     controls.autoRotateSpeed = 0.5;
 
     // Create a circular path
-    const radius = 4;
-    const segments = 8;
+    const radius = 26;
+    const segments = 1000; // Many points for smooth curve
     const curvePoints: THREE.Vector3[] = [];
     
     for (let i = 0; i < segments; i++) {
       const angle = (i / segments) * Math.PI * 2;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
-      const y = Math.sin(angle * 2) * 0.3;
+      const y = Math.sin(angle * 2) * 1; // Gentle wave
       curvePoints.push(new THREE.Vector3(x, y, z));
     }
     
@@ -381,7 +381,75 @@ const stretchedPaths = [
 
     // Current flow reference
     let flow: Flow | null = null;
-    let currentPaths = [...normalPaths];
+    let currentPaths = [...stretchedPaths]; // Start with stretched
+
+    // Tessellate geometry by subdividing triangles for smooth curve bending
+    function tessellateGeometry(geometry: THREE.BufferGeometry, maxEdgeLength: number): THREE.BufferGeometry {
+      const positions = geometry.getAttribute('position');
+      const normals = geometry.getAttribute('normal');
+      
+      const newPositions: number[] = [];
+      const newNormals: number[] = [];
+      
+      // Process each triangle
+      for (let i = 0; i < positions.count; i += 3) {
+        const v0 = new THREE.Vector3(positions.getX(i), positions.getY(i), positions.getZ(i));
+        const v1 = new THREE.Vector3(positions.getX(i + 1), positions.getY(i + 1), positions.getZ(i + 1));
+        const v2 = new THREE.Vector3(positions.getX(i + 2), positions.getY(i + 2), positions.getZ(i + 2));
+        
+        const n0 = normals ? new THREE.Vector3(normals.getX(i), normals.getY(i), normals.getZ(i)) : new THREE.Vector3(0, 0, 1);
+        const n1 = normals ? new THREE.Vector3(normals.getX(i + 1), normals.getY(i + 1), normals.getZ(i + 1)) : new THREE.Vector3(0, 0, 1);
+        const n2 = normals ? new THREE.Vector3(normals.getX(i + 2), normals.getY(i + 2), normals.getZ(i + 2)) : new THREE.Vector3(0, 0, 1);
+        
+        subdivideTriangle(v0, v1, v2, n0, n1, n2, maxEdgeLength, newPositions, newNormals);
+      }
+      
+      const newGeometry = new THREE.BufferGeometry();
+      newGeometry.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
+      newGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(newNormals, 3));
+      
+      return newGeometry;
+    }
+    
+    function subdivideTriangle(
+      v0: THREE.Vector3, v1: THREE.Vector3, v2: THREE.Vector3,
+      n0: THREE.Vector3, n1: THREE.Vector3, n2: THREE.Vector3,
+      maxEdgeLength: number,
+      positions: number[], normals: number[]
+    ) {
+      const edge0 = v0.distanceTo(v1);
+      const edge1 = v1.distanceTo(v2);
+      const edge2 = v2.distanceTo(v0);
+      const maxEdge = Math.max(edge0, edge1, edge2);
+      
+      if (maxEdge <= maxEdgeLength) {
+        // Triangle is small enough, add it
+        positions.push(v0.x, v0.y, v0.z, v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+        normals.push(n0.x, n0.y, n0.z, n1.x, n1.y, n1.z, n2.x, n2.y, n2.z);
+        return;
+      }
+      
+      // Subdivide by splitting the longest edge
+      const mid = new THREE.Vector3();
+      const midN = new THREE.Vector3();
+      
+      if (edge0 >= edge1 && edge0 >= edge2) {
+        mid.lerpVectors(v0, v1, 0.5);
+        midN.lerpVectors(n0, n1, 0.5).normalize();
+        subdivideTriangle(v0, mid, v2, n0, midN, n2, maxEdgeLength, positions, normals);
+        subdivideTriangle(mid, v1, v2, midN, n1, n2, maxEdgeLength, positions, normals);
+      } else if (edge1 >= edge2) {
+        mid.lerpVectors(v1, v2, 0.5);
+        midN.lerpVectors(n1, n2, 0.5).normalize();
+        subdivideTriangle(v0, v1, mid, n0, n1, midN, maxEdgeLength, positions, normals);
+        subdivideTriangle(v0, mid, v2, n0, midN, n2, maxEdgeLength, positions, normals);
+      } else {
+        mid.lerpVectors(v2, v0, 0.5);
+        midN.lerpVectors(n2, n0, 0.5).normalize();
+        subdivideTriangle(v0, v1, mid, n0, n1, midN, maxEdgeLength, positions, normals);
+        subdivideTriangle(mid, v1, v2, midN, n1, n2, maxEdgeLength, positions, normals);
+      }
+    }
 
     // Create geometry from SVG paths
     function createLogoGeometry(paths: string[]): THREE.BufferGeometry {
@@ -398,7 +466,8 @@ const stretchedPaths = [
           shapes.forEach(shape => {
             const extrudeSettings = {
               depth: 0.5,
-              bevelEnabled: false
+              bevelEnabled: false,
+              curveSegments: 12
             };
             const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
             geometries.push(geo);
@@ -423,30 +492,32 @@ const stretchedPaths = [
         geo.dispose();
       });
 
-      const mergedGeometry = new THREE.BufferGeometry();
+      let mergedGeometry = new THREE.BufferGeometry();
       mergedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(mergedPositions, 3));
       if (mergedNormals.length > 0) {
         mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3));
       }
 
       // Scale and position for curve
-      // Logo is ~333 units wide, scale down to fit curve
       const scaleFactor = 0.03;
-      mergedGeometry.scale(scaleFactor, -scaleFactor, scaleFactor); // Flip Y
+      mergedGeometry.scale(scaleFactor, -scaleFactor, scaleFactor);
       
-      // Rotate to stand upright (90 degrees around X axis)
+      // Rotate to stand upright
       mergedGeometry.rotateX(-Math.PI / 2);
       
       // Center vertically
       mergedGeometry.translate(0, 0.4, 0);
       
+      // Tessellate for smooth curve bending (max edge length 0.3 units)
+      mergedGeometry = tessellateGeometry(mergedGeometry, 0.3);
+      
       // Offset for curve
-      mergedGeometry.translate(5, 0, 0);
+      mergedGeometry.translate(16, 0, 0);
 
       return mergedGeometry;
     }
 
-    // Initialize with normal paths
+    // Initialize with current paths
     function initFlow() {
       const geometry = createLogoGeometry(currentPaths);
       const mesh = new THREE.Mesh(geometry, material);
@@ -479,8 +550,8 @@ const stretchedPaths = [
     // Initialize
     initFlow();
 
-    // Track 3D animation state
-    let isStretched3D = false;
+    // Track 3D animation state (starts stretched)
+    let isStretched3D = true;
     let isAnimating3D = false;
 
     function animate3DToStretched(duration = 1.5) {
