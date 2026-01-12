@@ -362,22 +362,22 @@ const stretchedPaths = [
     // Circle parameters
     const circleParams = {
       radius: 22,
-      ySpacing: 4
+      ySpacing: 4,
+      numCircles: 9
     };
     const segments = 200;
-    const numCircles = 9;
     
     let curves: THREE.CatmullRomCurve3[] = [];
     
     // Function to create/rebuild curves with sphere-like radii
     function buildCurves() {
       curves = [];
-      for (let c = 0; c < numCircles; c++) {
+      for (let c = 0; c < circleParams.numCircles; c++) {
         const curvePoints: THREE.Vector3[] = [];
-        const yOffset = (c - Math.floor(numCircles / 2)) * circleParams.ySpacing;
+        const yOffset = (c - Math.floor(circleParams.numCircles / 2)) * circleParams.ySpacing;
         
         // Calculate sphere-like radius for this ring
-        const sphereScale = getSphereScale(c, numCircles);
+        const sphereScale = getSphereScale(c, circleParams.numCircles);
         const ringRadius = circleParams.radius * sphereScale;
         
         for (let i = 0; i < segments; i++) {
@@ -420,6 +420,7 @@ const stretchedPaths = [
     
     // Calculate sphere-like scale for a ring based on its index
     function getSphereScale(index: number, total: number): number {
+      if (total <= 1) return 1; // Avoid division by zero
       // Map index to -1 to 1 range (center = 0)
       const normalized = (index - (total - 1) / 2) / ((total - 1) / 2);
       // Use cosine for sphere-like falloff, but limit range to 0.7-1.0
@@ -755,6 +756,7 @@ const stretchedPaths = [
     }
     
     const circleFolder = gui.addFolder('Circle');
+    circleFolder.add(circleParams, 'numCircles', 1, 100, 1).name('Num Rings').onChange(rebuildCurvesAndFlows);
     circleFolder.add(circleParams, 'radius', 5, 60, 1).name('Radius').onChange(rebuildCurvesAndFlows);
     circleFolder.add(circleParams, 'ySpacing', 1, 10, 0.5).name('Y Spacing').onChange(rebuildCurvesAndFlows);
     circleFolder.open();
