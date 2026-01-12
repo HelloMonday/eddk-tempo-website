@@ -322,10 +322,13 @@ const stretchedPaths = [
   document.getElementById('btn-toggle')?.addEventListener('click', toggleLoop);
 
   // ============================================
-  // THREE.JS VERSION - Canvas Texture Approach
+  // THREE.JS VERSION - SVG Geometry with Curve
   // ============================================
   
   import * as THREE from 'three';
+  import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+  import { Flow } from 'three/addons/modifiers/CurveModifier.js';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
   const container = document.getElementById('three-container');
   
@@ -334,72 +337,147 @@ const stretchedPaths = [
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
-    
-    // Create offscreen canvas for rendering SVG
-    const canvas2D = document.createElement('canvas');
-    const ctx = canvas2D.getContext('2d')!;
-    canvas2D.width = 2048;
-    canvas2D.height = 128;
 
     // Three.js setup
     const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 0.5, -0.5, 0.1, 10);
-    camera.position.z = 1;
+    const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 5, 10);
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setClearColor(0x111111);
     container.appendChild(renderer.domElement);
 
-    // Create texture from canvas
-    const texture = new THREE.CanvasTexture(canvas2D);
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
+    // Add OrbitControls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.5;
 
-    // Create plane with texture
-    const geometry = new THREE.PlaneGeometry(2, 0.5);
+    // Create a circular path
+    const radius = 4;
+    const segments = 8;
+    const curvePoints: THREE.Vector3[] = [];
+    
+    for (let i = 0; i < segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const y = Math.sin(angle * 2) * 0.3;
+      curvePoints.push(new THREE.Vector3(x, y, z));
+    }
+    
+    const curve = new THREE.CatmullRomCurve3(curvePoints, true, 'catmullrom', 0.5);
+
+    // SVG Loader
+    const loader = new SVGLoader();
+
+    // Material
     const material = new THREE.MeshBasicMaterial({ 
-      map: texture,
-      transparent: true
+      color: 0xffffff,
+      side: THREE.DoubleSide
     });
-    const plane = new THREE.Mesh(geometry, material);
-    scene.add(plane);
 
-    // Current state
+    // Current flow reference
+    let flow: Flow | null = null;
     let currentPaths = [...normalPaths];
-    let currentViewBoxWidth = normalWidth;
 
-    // Render SVG paths to canvas
-    function renderToCanvas() {
-      ctx.clearRect(0, 0, canvas2D.width, canvas2D.height);
+    // Create geometry from SVG paths
+    function createLogoGeometry(paths: string[]): THREE.BufferGeometry {
+      const geometries: THREE.BufferGeometry[] = [];
       
-      // Scale to fit canvas
-      const scaleX = canvas2D.width / currentViewBoxWidth;
-      const scaleY = canvas2D.height / svgHeight;
-      const scale = Math.min(scaleX, scaleY);
+      // Parse each path and create extruded geometry
+      paths.forEach((pathData, index) => {
+        const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg"><path d="${pathData}"/></svg>`;
+        const svgData = loader.parse(svgMarkup);
+        
+        svgData.paths.forEach(path => {
+          const shapes = SVGLoader.createShapes(path);
+          
+          shapes.forEach(shape => {
+            const extrudeSettings = {
+              depth: 0.5,
+              bevelEnabled: false
+            };
+            const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            geometries.push(geo);
+          });
+        });
+      });
+
+      // Merge all geometries
+      const mergedPositions: number[] = [];
+      const mergedNormals: number[] = [];
       
-      ctx.save();
-      ctx.fillStyle = 'white';
+      geometries.forEach(geo => {
+        const pos = geo.getAttribute('position');
+        const norm = geo.getAttribute('normal');
+        
+        for (let i = 0; i < pos.count; i++) {
+          mergedPositions.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+          if (norm) {
+            mergedNormals.push(norm.getX(i), norm.getY(i), norm.getZ(i));
+          }
+        }
+        geo.dispose();
+      });
+
+      const mergedGeometry = new THREE.BufferGeometry();
+      mergedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(mergedPositions, 3));
+      if (mergedNormals.length > 0) {
+        mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3));
+      }
+
+      // Scale and position for curve
+      // Logo is ~333 units wide, scale down to fit curve
+      const scaleFactor = 0.03;
+      mergedGeometry.scale(scaleFactor, -scaleFactor, scaleFactor); // Flip Y
+      
+      // Rotate to stand upright (90 degrees around X axis)
+      mergedGeometry.rotateX(-Math.PI / 2);
       
       // Center vertically
-      const offsetY = (canvas2D.height - svgHeight * scale) / 2;
-      ctx.translate(0, offsetY);
-      ctx.scale(scale, scale);
+      mergedGeometry.translate(0, 0.4, 0);
       
-      // Draw each path
-      currentPaths.forEach(pathData => {
-        const path = new Path2D(pathData);
-        ctx.fill(path);
-      });
-      
-      ctx.restore();
-      
-      // Update texture
-      texture.needsUpdate = true;
+      // Offset for curve
+      mergedGeometry.translate(5, 0, 0);
+
+      return mergedGeometry;
     }
 
-    // Initial render
-    renderToCanvas();
+    // Initialize with normal paths
+    function initFlow() {
+      const geometry = createLogoGeometry(currentPaths);
+      const mesh = new THREE.Mesh(geometry, material);
+      
+      flow = new Flow(mesh);
+      flow.updateCurve(0, curve);
+      scene.add(flow.object3D);
+    }
+
+    // Update geometry (recreate flow with new paths)
+    function updateLogoGeometry(paths: string[]) {
+      if (flow) {
+        scene.remove(flow.object3D);
+        flow.object3D.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+          }
+        });
+      }
+      
+      currentPaths = paths;
+      const geometry = createLogoGeometry(paths);
+      const mesh = new THREE.Mesh(geometry, material);
+      
+      flow = new Flow(mesh);
+      flow.updateCurve(0, curve);
+      scene.add(flow.object3D);
+    }
+
+    // Initialize
+    initFlow();
 
     // Track 3D animation state
     let isStretched3D = false;
@@ -416,12 +494,10 @@ const stretchedPaths = [
         duration,
         ease: 'power2.inOut',
         onUpdate: () => {
-          // Interpolate paths
-          currentPaths = normalPaths.map((_, i) => 
+          const interpolatedPaths = normalPaths.map((_, i) => 
             interpolatePaths(parsedNormalPaths[i], parsedStretchedPaths[i], progress.t)
           );
-          currentViewBoxWidth = normalWidth + (stretchedWidth - normalWidth) * progress.t;
-          renderToCanvas();
+          updateLogoGeometry(interpolatedPaths);
         },
         onComplete: () => {
           isStretched3D = true;
@@ -441,12 +517,10 @@ const stretchedPaths = [
         duration,
         ease: 'power2.inOut',
         onUpdate: () => {
-          // Interpolate paths
-          currentPaths = normalPaths.map((_, i) => 
+          const interpolatedPaths = normalPaths.map((_, i) => 
             interpolatePaths(parsedStretchedPaths[i], parsedNormalPaths[i], progress.t)
           );
-          currentViewBoxWidth = stretchedWidth - (stretchedWidth - normalWidth) * progress.t;
-          renderToCanvas();
+          updateLogoGeometry(interpolatedPaths);
         },
         onComplete: () => {
           isStretched3D = false;
@@ -483,9 +557,13 @@ const stretchedPaths = [
     function animate() {
       requestAnimationFrame(animate);
       
-      // Subtle 3D rotation
-      plane.rotation.y = Math.sin(Date.now() * 0.001) * 0.1;
-      plane.rotation.x = Math.sin(Date.now() * 0.0007) * 0.05;
+      // Move along curve
+      if (flow) {
+        flow.moveAlongCurve(0.002);
+      }
+      
+      // Update controls
+      controls.update();
       
       renderer.render(scene, camera);
     }
@@ -493,6 +571,8 @@ const stretchedPaths = [
 
     // Handle resize
     window.addEventListener('resize', () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
       renderer.setSize(container.clientWidth, container.clientHeight);
     });
   }
