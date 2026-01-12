@@ -1,0 +1,136 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Astro + GSAP + Three.js">
+  <main>
+    <div id="three-container"></div>
+    
+    <div class="content">
+      <h1 class="title">Welcome</h1>
+      <p class="subtitle">Astro + GSAP + Three.js Starter</p>
+      
+      <svg class="logo" viewBox="0 0 100 100" width="120" height="120">
+        <circle class="circle" cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="2" />
+        <path class="path" d="M30 50 L45 65 L70 35" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  main {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #three-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .title {
+    font-size: 4rem;
+    font-weight: 700;
+    opacity: 0;
+  }
+
+  .subtitle {
+    font-size: 1.25rem;
+    color: #888;
+    margin-top: 0.5rem;
+    opacity: 0;
+  }
+
+  .logo {
+    margin-top: 2rem;
+    opacity: 0;
+  }
+
+  .circle,
+  .path {
+    stroke-dasharray: 300;
+    stroke-dashoffset: 300;
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import * as THREE from 'three';
+
+  // Three.js setup
+  const container = document.getElementById('three-container');
+  if (container) {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    // Create a simple geometry
+    const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+    const material = new THREE.MeshBasicMaterial({ 
+      color: 0x4444ff,
+      wireframe: true 
+    });
+    const torusKnot = new THREE.Mesh(geometry, material);
+    scene.add(torusKnot);
+
+    camera.position.z = 4;
+
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      torusKnot.rotation.x += 0.005;
+      torusKnot.rotation.y += 0.005;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  }
+
+  // SVG path animation helper (mimics DrawSVG functionality)
+  function animateSVGPath(selector: string, duration: number, delay: number = 0) {
+    const el = document.querySelector(selector) as SVGGeometryElement | null;
+    if (el) {
+      const length = el.getTotalLength();
+      gsap.set(el, { strokeDasharray: length, strokeDashoffset: length });
+      gsap.to(el, { strokeDashoffset: 0, duration, delay, ease: 'power2.out' });
+    }
+  }
+
+  // GSAP animations
+  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+  tl.to('.title', { opacity: 1, y: 0, duration: 1, delay: 0.3 })
+    .to('.subtitle', { opacity: 1, y: 0, duration: 0.8 }, '-=0.5')
+    .to('.logo', { opacity: 1, duration: 0.5 }, '-=0.3')
+    .call(() => animateSVGPath('.circle', 1), [], '-=0.3')
+    .call(() => animateSVGPath('.path', 0.6), [], '-=0.3');
+</script>

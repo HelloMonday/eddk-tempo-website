@@ -1,0 +1,304 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Read the SVG path data
+const normalPaths = [
+  "M30.2339 23.2092H23.89L29.8006 5.13697H0L1.57823 0H67.152L65.5428 5.13697H36.1135L30.2339 23.2092Z",
+  "M121.715 23.2092H61.185L68.7357 0H129.203L127.718 4.70373H73.5633L72.016 9.25274H126.016L124.531 13.9565H70.6234L69.0761 18.5055H123.293L121.715 23.2092Z",
+  "M129.562 23.2092H123.621L131.203 0H153.979L160.632 16.3393L177.961 0H202.006L194.455 23.2092H188.142L194.084 4.70373H180.499L161.003 23.0854H156.64L149.213 4.70373H135.659L129.562 23.2092Z",
+  "M209.132 4.70373L206.904 11.4499H251.775C253.467 11.4499 254.88 11.1714 256.015 10.6143C257.17 10.0573 257.882 9.12895 258.15 7.82924C258.356 6.79772 258.181 6.02408 257.624 5.50832C257.088 4.97193 256.201 4.70373 254.963 4.70373H209.132ZM203.098 23.2092H196.754L204.305 0H257.005C258.738 0 260.213 0.319771 261.43 0.959314C262.668 1.59886 263.555 2.48596 264.092 3.62064C264.649 4.73468 264.824 5.99313 264.618 7.396C264.35 9.23211 263.689 10.8103 262.637 12.1307C261.585 13.4304 260.193 14.431 258.46 15.1324C256.747 15.8132 254.746 16.1536 252.456 16.1536H205.388L203.098 23.2092Z",
+  "M324.836 21.4453C322.752 22.6212 320.524 23.2092 318.152 23.2092H273.002C270.898 23.2092 269.134 22.776 267.71 21.9095C266.287 21.0224 265.286 19.8052 264.709 18.2579C264.131 16.7106 263.997 14.9777 264.306 13.059C264.678 10.7691 265.555 8.62351 266.937 6.62236C268.319 4.62121 270.062 3.02235 272.167 1.82579C274.271 0.608597 276.52 0 278.913 0H324.062C326.249 0 328.054 0.443554 329.478 1.33066C330.901 2.19714 331.892 3.40402 332.449 4.9513C333.006 6.49858 333.119 8.25216 332.789 10.212C332.397 12.5227 331.5 14.6785 330.097 16.6797C328.694 18.6602 326.94 20.2487 324.836 21.4453ZM271.269 17.3295C272.012 18.1135 273.188 18.5055 274.797 18.5055H317.471C318.709 18.5055 319.967 18.1341 321.246 17.3914C322.525 16.6487 323.639 15.6069 324.588 14.2659C325.537 12.9043 326.167 11.357 326.476 9.62408C326.765 7.93239 326.579 6.69457 325.919 5.91061C325.259 5.10602 324.196 4.70373 322.732 4.70373H279.315C278.036 4.70373 276.788 5.07508 275.571 5.81777C274.353 6.56047 273.301 7.61262 272.414 8.97423C271.548 10.3152 270.949 11.8522 270.619 13.5851C270.31 15.2768 270.527 16.525 271.269 17.3295Z"
+];
+
+const stretchedPaths = [
+  "M460.192 23.2092H453.848L459.883 4.70374H0L1.48539 0H925.614L924.129 4.70374H466.195L460.192 23.2092Z",
+  "M1846.18 23.2092H922.643L930.194 0H1853.67L1852.19 4.70374H935.021L933.474 9.25275H1850.52L1849 13.9565H932.081L930.534 18.5055H1847.76L1846.18 23.2092Z",
+  "M1857.35 23.2092H1851.04L1858.62 0H2307.24L2314.7 13.3685L2330.61 0H2781.7L2774.15 23.2092H2767.84L2773.78 4.70374H2333.05L2315.81 19.2172H2311.33L2303.22 4.70374H1863.42L1857.35 23.2092Z",
+  "M2791.79 4.70374L2789.56 11.4499H3695.12C3696.81 11.4499 3698.23 11.1713 3699.36 10.6143C3700.52 10.0573 3701.23 9.12894 3701.5 7.82922C3701.7 6.7977 3701.53 6.02406 3700.97 5.5083C3700.43 4.97191 3699.55 4.70374 3698.31 4.70374H2791.79ZM2785.75 23.2092H2779.41L2786.96 0H3700.35C3702.08 0 3703.56 0.319747 3704.78 0.95929C3706.01 1.59883 3706.9 2.48599 3707.44 3.62067C3707.99 4.73471 3708.17 5.99313 3707.96 7.396C3707.7 9.2321 3707.04 10.8103 3705.98 12.1307C3704.93 13.4304 3703.54 14.431 3701.81 15.1324C3700.09 15.8132 3698.09 16.1536 3695.8 16.1536H2788.04L2785.75 23.2092Z",
+  "M4627.45 21.4453C4625.37 22.6212 4623.14 23.2092 4620.77 23.2092H3719.48C3717.37 23.2092 3715.61 22.776 3714.18 21.9095C3712.76 21.0224 3711.76 19.8052 3711.18 18.2579C3710.6 16.7107 3710.47 14.9776 3710.78 13.059C3711.15 10.769 3712.03 8.62352 3713.41 6.62238C3714.79 4.62123 3716.54 3.02237 3718.64 1.82581C3720.74 0.608612 3722.99 0 3725.39 0H4626.68C4628.86 0 4630.67 0.44358 4632.09 1.33069C4633.52 2.19717 4634.51 3.40401 4635.06 4.95129C4635.62 6.49857 4635.73 8.25215 4635.4 10.212C4635.01 12.5226 4634.11 14.6785 4632.71 16.6797C4631.31 18.6602 4629.56 20.2487 4627.45 21.4453ZM3717.74 17.3295C3718.49 18.1135 3719.66 18.5055 3721.27 18.5055H4620.09C4621.32 18.5055 4622.58 18.1341 4623.86 17.3914C4625.14 16.6487 4626.25 15.6069 4627.2 14.2659C4628.15 12.9043 4628.78 11.357 4629.09 9.62408C4629.38 7.93239 4629.19 6.69454 4628.53 5.91058C4627.87 5.106 4626.81 4.70374 4625.35 4.70374H3725.79C3724.51 4.70374 3723.26 5.07505 3722.04 5.81775C3720.83 6.56044 3719.77 7.61264 3718.89 8.97424C3718.02 10.3152 3717.42 11.8522 3717.09 13.5851C3716.78 15.2768 3717 16.5249 3717.74 17.3295Z"
+];
+---
+
+<Layout title="Logo Animation">
+  <main>
+    <div class="container">
+      <h1>TEMPO Logo Animation</h1>
+      
+      <div class="logo-wrapper">
+        <svg 
+          id="logo-svg" 
+          viewBox="0 0 333 24" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="xMinYMid meet"
+        >
+          <path id="path-t" d={normalPaths[0]} fill="white"/>
+          <path id="path-e" d={normalPaths[1]} fill="white"/>
+          <path id="path-m" d={normalPaths[2]} fill="white"/>
+          <path id="path-p" d={normalPaths[3]} fill="white"/>
+          <path id="path-o" d={normalPaths[4]} fill="white"/>
+        </svg>
+      </div>
+
+      <div class="controls">
+        <button id="btn-stretch">Stretch</button>
+        <button id="btn-normal">Normal</button>
+        <button id="btn-toggle">Toggle Loop</button>
+      </div>
+
+      <p class="hint">Click buttons to animate between normal and stretched states</p>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  main {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .container {
+    text-align: left;
+    width: 100%;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 3rem;
+    color: #666;
+    font-weight: 400;
+  }
+
+  .logo-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2rem 0;
+  }
+
+  #logo-svg {
+    height: 80px;
+    width: auto;
+    display: block;
+  }
+
+  .controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+    margin-top: 3rem;
+  }
+
+  button {
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  button:hover {
+    background: #333;
+    border-color: #666;
+  }
+
+  button:active {
+    transform: scale(0.98);
+  }
+
+  .hint {
+    margin-top: 2rem;
+    color: #555;
+    font-size: 0.875rem;
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+
+  // Path data
+  const normalPaths = [
+    "M30.2339 23.2092H23.89L29.8006 5.13697H0L1.57823 0H67.152L65.5428 5.13697H36.1135L30.2339 23.2092Z",
+    "M121.715 23.2092H61.185L68.7357 0H129.203L127.718 4.70373H73.5633L72.016 9.25274H126.016L124.531 13.9565H70.6234L69.0761 18.5055H123.293L121.715 23.2092Z",
+    "M129.562 23.2092H123.621L131.203 0H153.979L160.632 16.3393L177.961 0H202.006L194.455 23.2092H188.142L194.084 4.70373H180.499L161.003 23.0854H156.64L149.213 4.70373H135.659L129.562 23.2092Z",
+    "M209.132 4.70373L206.904 11.4499H251.775C253.467 11.4499 254.88 11.1714 256.015 10.6143C257.17 10.0573 257.882 9.12895 258.15 7.82924C258.356 6.79772 258.181 6.02408 257.624 5.50832C257.088 4.97193 256.201 4.70373 254.963 4.70373H209.132ZM203.098 23.2092H196.754L204.305 0H257.005C258.738 0 260.213 0.319771 261.43 0.959314C262.668 1.59886 263.555 2.48596 264.092 3.62064C264.649 4.73468 264.824 5.99313 264.618 7.396C264.35 9.23211 263.689 10.8103 262.637 12.1307C261.585 13.4304 260.193 14.431 258.46 15.1324C256.747 15.8132 254.746 16.1536 252.456 16.1536H205.388L203.098 23.2092Z",
+    "M324.836 21.4453C322.752 22.6212 320.524 23.2092 318.152 23.2092H273.002C270.898 23.2092 269.134 22.776 267.71 21.9095C266.287 21.0224 265.286 19.8052 264.709 18.2579C264.131 16.7106 263.997 14.9777 264.306 13.059C264.678 10.7691 265.555 8.62351 266.937 6.62236C268.319 4.62121 270.062 3.02235 272.167 1.82579C274.271 0.608597 276.52 0 278.913 0H324.062C326.249 0 328.054 0.443554 329.478 1.33066C330.901 2.19714 331.892 3.40402 332.449 4.9513C333.006 6.49858 333.119 8.25216 332.789 10.212C332.397 12.5227 331.5 14.6785 330.097 16.6797C328.694 18.6602 326.94 20.2487 324.836 21.4453ZM271.269 17.3295C272.012 18.1135 273.188 18.5055 274.797 18.5055H317.471C318.709 18.5055 319.967 18.1341 321.246 17.3914C322.525 16.6487 323.639 15.6069 324.588 14.2659C325.537 12.9043 326.167 11.357 326.476 9.62408C326.765 7.93239 326.579 6.69457 325.919 5.91061C325.259 5.10602 324.196 4.70373 322.732 4.70373H279.315C278.036 4.70373 276.788 5.07508 275.571 5.81777C274.353 6.56047 273.301 7.61262 272.414 8.97423C271.548 10.3152 270.949 11.8522 270.619 13.5851C270.31 15.2768 270.527 16.525 271.269 17.3295Z"
+  ];
+
+  const stretchedPaths = [
+    "M460.192 23.2092H453.848L459.883 4.70374H0L1.48539 0H925.614L924.129 4.70374H466.195L460.192 23.2092Z",
+    "M1846.18 23.2092H922.643L930.194 0H1853.67L1852.19 4.70374H935.021L933.474 9.25275H1850.52L1849 13.9565H932.081L930.534 18.5055H1847.76L1846.18 23.2092Z",
+    "M1857.35 23.2092H1851.04L1858.62 0H2307.24L2314.7 13.3685L2330.61 0H2781.7L2774.15 23.2092H2767.84L2773.78 4.70374H2333.05L2315.81 19.2172H2311.33L2303.22 4.70374H1863.42L1857.35 23.2092Z",
+    "M2791.79 4.70374L2789.56 11.4499H3695.12C3696.81 11.4499 3698.23 11.1713 3699.36 10.6143C3700.52 10.0573 3701.23 9.12894 3701.5 7.82922C3701.7 6.7977 3701.53 6.02406 3700.97 5.5083C3700.43 4.97191 3699.55 4.70374 3698.31 4.70374H2791.79ZM2785.75 23.2092H2779.41L2786.96 0H3700.35C3702.08 0 3703.56 0.319747 3704.78 0.95929C3706.01 1.59883 3706.9 2.48599 3707.44 3.62067C3707.99 4.73471 3708.17 5.99313 3707.96 7.396C3707.7 9.2321 3707.04 10.8103 3705.98 12.1307C3704.93 13.4304 3703.54 14.431 3701.81 15.1324C3700.09 15.8132 3698.09 16.1536 3695.8 16.1536H2788.04L2785.75 23.2092Z",
+    "M4627.45 21.4453C4625.37 22.6212 4623.14 23.2092 4620.77 23.2092H3719.48C3717.37 23.2092 3715.61 22.776 3714.18 21.9095C3712.76 21.0224 3711.76 19.8052 3711.18 18.2579C3710.6 16.7107 3710.47 14.9776 3710.78 13.059C3711.15 10.769 3712.03 8.62352 3713.41 6.62238C3714.79 4.62123 3716.54 3.02237 3718.64 1.82581C3720.74 0.608612 3722.99 0 3725.39 0H4626.68C4628.86 0 4630.67 0.44358 4632.09 1.33069C4633.52 2.19717 4634.51 3.40401 4635.06 4.95129C4635.62 6.49857 4635.73 8.25215 4635.4 10.212C4635.01 12.5226 4634.11 14.6785 4632.71 16.6797C4631.31 18.6602 4629.56 20.2487 4627.45 21.4453ZM3717.74 17.3295C3718.49 18.1135 3719.66 18.5055 3721.27 18.5055H4620.09C4621.32 18.5055 4622.58 18.1341 4623.86 17.3914C4625.14 16.6487 4626.25 15.6069 4627.2 14.2659C4628.15 12.9043 4628.78 11.357 4629.09 9.62408C4629.38 7.93239 4629.19 6.69454 4628.53 5.91058C4627.87 5.106 4626.81 4.70374 4625.35 4.70374H3725.79C3724.51 4.70374 3723.26 5.07505 3722.04 5.81775C3720.83 6.56044 3719.77 7.61264 3718.89 8.97424C3718.02 10.3152 3717.42 11.8522 3717.09 13.5851C3716.78 15.2768 3717 16.5249 3717.74 17.3295Z"
+  ];
+
+  const pathIds = ['path-t', 'path-e', 'path-m', 'path-p', 'path-o'];
+  const svg = document.getElementById('logo-svg') as unknown as SVGSVGElement;
+
+  // Parse path into tokens (commands and numbers)
+  function parsePath(d: string): (string | number)[] {
+    const tokens: (string | number)[] = [];
+    const regex = /([a-zA-Z])|(-?\d*\.?\d+)/g;
+    let match;
+    while ((match = regex.exec(d)) !== null) {
+      if (match[1]) {
+        tokens.push(match[1]);
+      } else if (match[2]) {
+        tokens.push(parseFloat(match[2]));
+      }
+    }
+    return tokens;
+  }
+
+  // Interpolate between two parsed paths
+  function interpolatePaths(from: (string | number)[], to: (string | number)[], t: number): string {
+    const result: string[] = [];
+    for (let i = 0; i < from.length; i++) {
+      if (typeof from[i] === 'string') {
+        result.push(from[i] as string);
+      } else {
+        const fromVal = from[i] as number;
+        const toVal = to[i] as number;
+        const interpolated = fromVal + (toVal - fromVal) * t;
+        result.push(interpolated.toFixed(4));
+      }
+    }
+    return result.join(' ').replace(/ ([a-zA-Z]) /g, '$1').replace(/([a-zA-Z])(\d)/g, '$1 $2');
+  }
+
+  // Pre-parse all paths
+  const parsedNormalPaths = normalPaths.map(parsePath);
+  const parsedStretchedPaths = stretchedPaths.map(parsePath);
+
+  let isStretched = false;
+  let isAnimating = false;
+
+  // Dimensions - height fixed at 80px, width scales proportionally
+  const svgHeight = 24; // viewBox height
+  const normalWidth = 333;
+  const stretchedWidth = 4636;
+  
+  // Calculate actual pixel widths for 80px height
+  const scale = 80 / svgHeight;
+  const normalPixelWidth = normalWidth * scale;
+  const stretchedPixelWidth = stretchedWidth * scale;
+
+  function animateToStretched(duration = 1.5) {
+    if (isAnimating || isStretched) return;
+    isAnimating = true;
+
+    const progress = { t: 0 };
+    
+    gsap.to(progress, {
+      t: 1,
+      duration,
+      ease: 'power2.inOut',
+      onUpdate: () => {
+        // Update each path with direct numeric interpolation
+        pathIds.forEach((id, i) => {
+          const path = document.getElementById(id);
+          if (path) {
+            const interpolated = interpolatePaths(parsedNormalPaths[i], parsedStretchedPaths[i], progress.t);
+            path.setAttribute('d', interpolated);
+          }
+        });
+        
+        // Update viewBox and width
+        const currentViewBoxWidth = normalWidth + (stretchedWidth - normalWidth) * progress.t;
+        svg.setAttribute('viewBox', `0 0 ${currentViewBoxWidth} ${svgHeight}`);
+        const currentPixelWidth = normalPixelWidth + (stretchedPixelWidth - normalPixelWidth) * progress.t;
+        svg.style.width = `${currentPixelWidth}px`;
+      },
+      onComplete: () => {
+        isStretched = true;
+        isAnimating = false;
+      }
+    });
+  }
+
+  function animateToNormal(duration = 1.5) {
+    if (isAnimating || !isStretched) return;
+    isAnimating = true;
+
+    const progress = { t: 0 };
+    
+    gsap.to(progress, {
+      t: 1,
+      duration,
+      ease: 'power2.inOut',
+      onUpdate: () => {
+        // Update each path with direct numeric interpolation
+        pathIds.forEach((id, i) => {
+          const path = document.getElementById(id);
+          if (path) {
+            const interpolated = interpolatePaths(parsedStretchedPaths[i], parsedNormalPaths[i], progress.t);
+            path.setAttribute('d', interpolated);
+          }
+        });
+        
+        // Update viewBox and width
+        const currentViewBoxWidth = stretchedWidth - (stretchedWidth - normalWidth) * progress.t;
+        svg.setAttribute('viewBox', `0 0 ${currentViewBoxWidth} ${svgHeight}`);
+        const currentPixelWidth = stretchedPixelWidth - (stretchedPixelWidth - normalPixelWidth) * progress.t;
+        svg.style.width = `${currentPixelWidth}px`;
+      },
+      onComplete: () => {
+        isStretched = false;
+        isAnimating = false;
+      }
+    });
+  }
+
+  let loopRunning = false;
+
+  function toggleLoop() {
+    if (loopRunning) {
+      loopRunning = false;
+      return;
+    }
+
+    loopRunning = true;
+    
+    function runLoop() {
+      if (!loopRunning) return;
+      
+      if (!isStretched && !isAnimating) {
+        animateToStretched(2);
+        setTimeout(() => {
+          if (loopRunning) runLoop();
+        }, 2500);
+      } else if (isStretched && !isAnimating) {
+        animateToNormal(2);
+        setTimeout(() => {
+          if (loopRunning) runLoop();
+        }, 2500);
+      } else {
+        setTimeout(() => {
+          if (loopRunning) runLoop();
+        }, 100);
+      }
+    }
+    
+    runLoop();
+  }
+
+  // Button handlers
+  document.getElementById('btn-stretch')?.addEventListener('click', () => {
+    loopRunning = false;
+    animateToStretched();
+  });
+
+  document.getElementById('btn-normal')?.addEventListener('click', () => {
+    loopRunning = false;
+    animateToNormal();
+  });
+
+  document.getElementById('btn-toggle')?.addEventListener('click', toggleLoop);
+</script>
