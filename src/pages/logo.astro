@@ -356,7 +356,7 @@ const stretchedPaths = [
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.autoRotate = true;
+    controls.autoRotate = false;
     controls.autoRotateSpeed = 0.5;
 
     // Circle parameters
@@ -365,7 +365,9 @@ const stretchedPaths = [
       ySpacing: 4,
       numCircles: 9,
       squareness: 0, // 0 = circle, 1 = square
-      aspectRatio: 1 // 1 = equal, <1 = wide, >1 = tall
+      aspectRatio: 1, // 1 = equal, <1 = wide, >1 = tall
+      sphereAmount: 0, // 0 = cylinder, 1 = sphere-like
+      circleOffsetX: 0 // offset stagger per ring
     };
     const segments = 200;
     
@@ -378,9 +380,9 @@ const stretchedPaths = [
         const curvePoints: THREE.Vector3[] = [];
         const yOffset = (c - Math.floor(circleParams.numCircles / 2)) * circleParams.ySpacing;
         
-        // Calculate sphere-like radius for this ring
+        // Interpolate between uniform and sphere-like radius based on sphereAmount
         const sphereScale = getSphereScale(c, circleParams.numCircles);
-        const ringRadius = circleParams.radius * sphereScale;
+        const ringRadius = circleParams.radius * (1 - circleParams.sphereAmount + circleParams.sphereAmount * sphereScale);
         
         for (let i = 0; i < segments; i++) {
           const angle = (i / segments) * Math.PI * 2;
@@ -517,7 +519,8 @@ const stretchedPaths = [
     }
 
     // Create geometry from SVG paths
-    function createLogoGeometry(paths: string[], offsetX: number = params.offsetX): THREE.BufferGeometry {
+    // curveScale: scale geometry proportionally to curve size to maintain letter spacing
+    function createLogoGeometry(paths: string[], offsetX: number = params.offsetX, curveScale: number = 1): THREE.BufferGeometry {
       const geometries: THREE.BufferGeometry[] = [];
       
       // Parse each path and create extruded geometry
@@ -563,8 +566,9 @@ const stretchedPaths = [
         mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3));
       }
 
-      // Scale and position for curve
-      mergedGeometry.scale(params.scale, -params.scale, params.scale);
+      // Scale and position for curve (multiply by curveScale to maintain letter spacing)
+      const finalScale = params.scale * curveScale;
+      mergedGeometry.scale(finalScale, -finalScale, finalScale);
       
       // Rotate using GUI params
       mergedGeometry.rotateX(params.rotateX);
@@ -583,29 +587,53 @@ const stretchedPaths = [
       return mergedGeometry;
     }
 
+    // Track ring groups (each contains flow + center sphere)
+    let ringGroups: THREE.Group[] = [];
+
+    // Red sphere material for center markers
+    const redSphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+
     // Initialize with current paths - create flow for each curve
     function initFlows() {
       flows = [];
+      ringGroups = [];
+      
       curves.forEach((curveItem, index) => {
+        // Create a group for this ring
+        const group = new THREE.Group();
+        
+        // Calculate curve scale for this ring (to maintain letter spacing)
+        const sphereScale = getSphereScale(index, circleParams.numCircles);
+        const curveScale = 1 - circleParams.sphereAmount + circleParams.sphereAmount * sphereScale;
+        
         // Stagger offsetX for each circle
-        const circleOffsetX = params.offsetX + (index * 4);
-        const geometry = createLogoGeometry(currentPaths, circleOffsetX);
+        const offsetX = params.offsetX + (index * circleParams.circleOffsetX);
+        const geometry = createLogoGeometry(currentPaths, offsetX, curveScale);
         const mesh = new THREE.Mesh(geometry, material.clone());
         
         const flow = new Flow(mesh);
         flow.updateCurve(0, curveItem);
+        group.add(flow.object3D);
         
-        scene.add(flow.object3D);
+        // Add red sphere at the center of the curve
+        const yOffset = (index - Math.floor(circleParams.numCircles / 2)) * circleParams.ySpacing;
+        const centerSphere = new THREE.Mesh(sphereGeometry, redSphereMaterial);
+        centerSphere.position.set(0, yOffset, 0);
+        group.add(centerSphere);
+        
+        scene.add(group);
         flows.push(flow);
+        ringGroups.push(group);
       });
     }
 
     // Update geometry (recreate all flows with new paths)
     function updateLogoGeometry(paths: string[]) {
-      // Remove existing flows
-      flows.forEach(flow => {
-        scene.remove(flow.object3D);
-        flow.object3D.traverse((child: THREE.Object3D) => {
+      // Remove existing groups
+      ringGroups.forEach(group => {
+        scene.remove(group);
+        group.traverse((child: THREE.Object3D) => {
           if (child instanceof THREE.Mesh) {
             child.geometry.dispose();
           }
@@ -614,18 +642,34 @@ const stretchedPaths = [
       
       currentPaths = paths;
       flows = [];
+      ringGroups = [];
       
       curves.forEach((curveItem, index) => {
+        // Create a group for this ring
+        const group = new THREE.Group();
+        
+        // Calculate curve scale for this ring (to maintain letter spacing)
+        const sphereScale = getSphereScale(index, circleParams.numCircles);
+        const curveScale = 1 - circleParams.sphereAmount + circleParams.sphereAmount * sphereScale;
+        
         // Stagger offsetX for each circle
-        const circleOffsetX = params.offsetX + (index * 4);
-        const geometry = createLogoGeometry(paths, circleOffsetX);
+        const offsetX = params.offsetX + (index * circleParams.circleOffsetX);
+        const geometry = createLogoGeometry(paths, offsetX, curveScale);
         const mesh = new THREE.Mesh(geometry, material.clone());
         
         const flow = new Flow(mesh);
         flow.updateCurve(0, curveItem);
+        group.add(flow.object3D);
         
-        scene.add(flow.object3D);
+        // Add red sphere at the center of the curve
+        const yOffset = (index - Math.floor(circleParams.numCircles / 2)) * circleParams.ySpacing;
+        const centerSphere = new THREE.Mesh(sphereGeometry, redSphereMaterial);
+        centerSphere.position.set(0, yOffset, 0);
+        group.add(centerSphere);
+        
+        scene.add(group);
         flows.push(flow);
+        ringGroups.push(group);
       });
     }
 
@@ -724,10 +768,10 @@ const stretchedPaths = [
         lastTime = now;
       }
       
-      // Move all flows along their curves
-      flows.forEach(flow => {
-        flow.moveAlongCurve(-0.001);
-      });
+      // Move all flows along their curves (paused)
+      // flows.forEach(flow => {
+      //   flow.moveAlongCurve(-0.001);
+      // });
       
       // Update controls
       controls.update();
@@ -777,10 +821,28 @@ const stretchedPaths = [
     
     const circleFolder = gui.addFolder('Circle');
     circleFolder.add(circleParams, 'numCircles', 1, 100, 1).name('Num Rings').onChange(rebuildCurvesAndFlows);
-    circleFolder.add(circleParams, 'radius', 5, 60, 1).name('Radius').onChange(rebuildCurvesAndFlows);
+    circleFolder.add(circleParams, 'radius', 5, 60, 0.1).name('Radius').onChange(rebuildCurvesAndFlows);
     circleFolder.add(circleParams, 'ySpacing', 1, 10, 0.5).name('Y Spacing').onChange(rebuildCurvesAndFlows);
     circleFolder.add(circleParams, 'squareness', 0, 1, 0.01).name('Squareness').onChange(rebuildCurvesAndFlows);
     circleFolder.add(circleParams, 'aspectRatio', 0.25, 4, 0.01).name('Aspect Ratio').onChange(rebuildCurvesAndFlows);
+    circleFolder.add(circleParams, 'circleOffsetX', 0, 10, 0.5).name('Ring Offset X').onChange(rebuildCurvesAndFlows);
+    
+    // Animate sphere effect by rebuilding curves at different radii
+    const sphereScaleParams = {
+      scaleDownCircles: function() {
+        const targetAmount = circleParams.sphereAmount === 0 ? 1 : 0;
+        gsap.to(circleParams, {
+          sphereAmount: targetAmount,
+          duration: 1.5,
+          ease: 'power2.inOut',
+          onUpdate: () => {
+            buildCurves();
+            updateLogoGeometry(currentPaths);
+          }
+        });
+      }
+    };
+    circleFolder.add(sphereScaleParams, 'scaleDownCircles').name('Scale Down Circles');
     circleFolder.open();
     
     // FPS display
