@@ -363,7 +363,9 @@ const stretchedPaths = [
     const circleParams = {
       radius: 22,
       ySpacing: 4,
-      numCircles: 9
+      numCircles: 9,
+      squareness: 0, // 0 = circle, 1 = square
+      aspectRatio: 1 // 1 = equal, <1 = wide, >1 = tall
     };
     const segments = 200;
     
@@ -382,8 +384,26 @@ const stretchedPaths = [
         
         for (let i = 0; i < segments; i++) {
           const angle = (i / segments) * Math.PI * 2;
-          const x = Math.cos(angle) * ringRadius;
-          const z = Math.sin(angle) * ringRadius;
+          
+          // Circle coordinates
+          const circleX = Math.cos(angle) * ringRadius;
+          const circleZ = Math.sin(angle) * ringRadius;
+          
+          // Square coordinates (using superellipse with high exponent)
+          const n = 20; // High value = more square
+          const squareX = Math.sign(Math.cos(angle)) * Math.pow(Math.abs(Math.cos(angle)), 2/n) * ringRadius;
+          const squareZ = Math.sign(Math.sin(angle)) * Math.pow(Math.abs(Math.sin(angle)), 2/n) * ringRadius;
+          
+          // Interpolate between circle and square
+          const s = circleParams.squareness;
+          let x = circleX * (1 - s) + squareX * s;
+          let z = circleZ * (1 - s) + squareZ * s;
+          
+          // Apply aspect ratio (stretch X relative to Z)
+          const ar = circleParams.aspectRatio;
+          x = x / ar;
+          z = z * ar;
+          
           curvePoints.push(new THREE.Vector3(x, yOffset, z));
         }
         
@@ -399,7 +419,7 @@ const stretchedPaths = [
 
     // Material
     const material = new THREE.MeshBasicMaterial({ 
-      color: 0xffffff,
+      color: 0x666666,
       side: THREE.DoubleSide
     });
 
@@ -510,7 +530,7 @@ const stretchedPaths = [
           
           shapes.forEach(shape => {
             const extrudeSettings = {
-              depth: 0.5,
+              depth: 0.2,
               bevelEnabled: false,
               curveSegments: 12
             };
@@ -706,7 +726,7 @@ const stretchedPaths = [
       
       // Move all flows along their curves
       flows.forEach(flow => {
-        flow.moveAlongCurve(-0.004);
+        flow.moveAlongCurve(-0.001);
       });
       
       // Update controls
@@ -759,6 +779,8 @@ const stretchedPaths = [
     circleFolder.add(circleParams, 'numCircles', 1, 100, 1).name('Num Rings').onChange(rebuildCurvesAndFlows);
     circleFolder.add(circleParams, 'radius', 5, 60, 1).name('Radius').onChange(rebuildCurvesAndFlows);
     circleFolder.add(circleParams, 'ySpacing', 1, 10, 0.5).name('Y Spacing').onChange(rebuildCurvesAndFlows);
+    circleFolder.add(circleParams, 'squareness', 0, 1, 0.01).name('Squareness').onChange(rebuildCurvesAndFlows);
+    circleFolder.add(circleParams, 'aspectRatio', 0.25, 4, 0.01).name('Aspect Ratio').onChange(rebuildCurvesAndFlows);
     circleFolder.open();
     
     // FPS display
