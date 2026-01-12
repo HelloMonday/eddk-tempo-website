@@ -47,6 +47,9 @@ const stretchedPaths = [
       </div>
 
       <p class="hint">Click buttons to animate between normal and stretched states</p>
+      
+      <h2>Three.js Version</h2>
+      <div id="three-container"></div>
     </div>
   </main>
 </Layout>
@@ -116,6 +119,22 @@ const stretchedPaths = [
     margin-top: 2rem;
     color: #555;
     font-size: 0.875rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    margin-top: 4rem;
+    margin-bottom: 1rem;
+    color: #666;
+    font-weight: 400;
+  }
+
+  #three-container {
+    width: 100%;
+    height: 400px;
+    background: #111;
+    border-radius: 8px;
+    overflow: hidden;
   }
 </style>
 
@@ -301,4 +320,180 @@ const stretchedPaths = [
   });
 
   document.getElementById('btn-toggle')?.addEventListener('click', toggleLoop);
+
+  // ============================================
+  // THREE.JS VERSION - Canvas Texture Approach
+  // ============================================
+  
+  import * as THREE from 'three';
+
+  const container = document.getElementById('three-container');
+  
+  if (container) {
+    // Clean up existing
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+    
+    // Create offscreen canvas for rendering SVG
+    const canvas2D = document.createElement('canvas');
+    const ctx = canvas2D.getContext('2d')!;
+    canvas2D.width = 2048;
+    canvas2D.height = 128;
+
+    // Three.js setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 0.5, -0.5, 0.1, 10);
+    camera.position.z = 1;
+    
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setClearColor(0x111111);
+    container.appendChild(renderer.domElement);
+
+    // Create texture from canvas
+    const texture = new THREE.CanvasTexture(canvas2D);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+
+    // Create plane with texture
+    const geometry = new THREE.PlaneGeometry(2, 0.5);
+    const material = new THREE.MeshBasicMaterial({ 
+      map: texture,
+      transparent: true
+    });
+    const plane = new THREE.Mesh(geometry, material);
+    scene.add(plane);
+
+    // Current state
+    let currentPaths = [...normalPaths];
+    let currentViewBoxWidth = normalWidth;
+
+    // Render SVG paths to canvas
+    function renderToCanvas() {
+      ctx.clearRect(0, 0, canvas2D.width, canvas2D.height);
+      
+      // Scale to fit canvas
+      const scaleX = canvas2D.width / currentViewBoxWidth;
+      const scaleY = canvas2D.height / svgHeight;
+      const scale = Math.min(scaleX, scaleY);
+      
+      ctx.save();
+      ctx.fillStyle = 'white';
+      
+      // Center vertically
+      const offsetY = (canvas2D.height - svgHeight * scale) / 2;
+      ctx.translate(0, offsetY);
+      ctx.scale(scale, scale);
+      
+      // Draw each path
+      currentPaths.forEach(pathData => {
+        const path = new Path2D(pathData);
+        ctx.fill(path);
+      });
+      
+      ctx.restore();
+      
+      // Update texture
+      texture.needsUpdate = true;
+    }
+
+    // Initial render
+    renderToCanvas();
+
+    // Track 3D animation state
+    let isStretched3D = false;
+    let isAnimating3D = false;
+
+    function animate3DToStretched(duration = 1.5) {
+      if (isAnimating3D || isStretched3D) return;
+      isAnimating3D = true;
+
+      const progress = { t: 0 };
+      
+      gsap.to(progress, {
+        t: 1,
+        duration,
+        ease: 'power2.inOut',
+        onUpdate: () => {
+          // Interpolate paths
+          currentPaths = normalPaths.map((_, i) => 
+            interpolatePaths(parsedNormalPaths[i], parsedStretchedPaths[i], progress.t)
+          );
+          currentViewBoxWidth = normalWidth + (stretchedWidth - normalWidth) * progress.t;
+          renderToCanvas();
+        },
+        onComplete: () => {
+          isStretched3D = true;
+          isAnimating3D = false;
+        }
+      });
+    }
+
+    function animate3DToNormal(duration = 1.5) {
+      if (isAnimating3D || !isStretched3D) return;
+      isAnimating3D = true;
+
+      const progress = { t: 0 };
+      
+      gsap.to(progress, {
+        t: 1,
+        duration,
+        ease: 'power2.inOut',
+        onUpdate: () => {
+          // Interpolate paths
+          currentPaths = normalPaths.map((_, i) => 
+            interpolatePaths(parsedStretchedPaths[i], parsedNormalPaths[i], progress.t)
+          );
+          currentViewBoxWidth = stretchedWidth - (stretchedWidth - normalWidth) * progress.t;
+          renderToCanvas();
+        },
+        onComplete: () => {
+          isStretched3D = false;
+          isAnimating3D = false;
+        }
+      });
+    }
+
+    // Hook into buttons
+    document.getElementById('btn-stretch')?.addEventListener('click', () => animate3DToStretched());
+    document.getElementById('btn-normal')?.addEventListener('click', () => animate3DToNormal());
+    
+    let loop3DRunning = false;
+    document.getElementById('btn-toggle')?.addEventListener('click', () => {
+      loop3DRunning = !loop3DRunning;
+      if (loop3DRunning) {
+        function run3DLoop() {
+          if (!loop3DRunning) return;
+          if (!isStretched3D && !isAnimating3D) {
+            animate3DToStretched(2);
+            setTimeout(() => loop3DRunning && run3DLoop(), 2500);
+          } else if (isStretched3D && !isAnimating3D) {
+            animate3DToNormal(2);
+            setTimeout(() => loop3DRunning && run3DLoop(), 2500);
+          } else {
+            setTimeout(() => loop3DRunning && run3DLoop(), 100);
+          }
+        }
+        run3DLoop();
+      }
+    });
+
+    // Render loop
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      // Subtle 3D rotation
+      plane.rotation.y = Math.sin(Date.now() * 0.001) * 0.1;
+      plane.rotation.x = Math.sin(Date.now() * 0.0007) * 0.05;
+      
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+  }
 </script>

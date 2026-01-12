@@ -1,0 +1,452 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const portfolioItems = [
+  {
+    title: "Luxe Brand Identity",
+    category: "Branding",
+    year: "2024",
+    description: "Complete visual identity for a premium lifestyle brand"
+  },
+  {
+    title: "Nordic Finance App",
+    category: "UI/UX Design",
+    year: "2024",
+    description: "Mobile banking experience redesign"
+  },
+  {
+    title: "Artisan Coffee Co.",
+    category: "Web Design",
+    year: "2023",
+    description: "E-commerce platform for specialty coffee"
+  },
+  {
+    title: "Museum of Tomorrow",
+    category: "Digital Experience",
+    year: "2023",
+    description: "Interactive exhibition design"
+  },
+  {
+    title: "Harmony Wellness",
+    category: "Branding",
+    year: "2022",
+    description: "Holistic health brand system"
+  },
+  {
+    title: "Electric Dreams",
+    category: "Motion Design",
+    year: "2022",
+    description: "Animated brand films and social content"
+  }
+];
+---
+
+<Layout title="Kim - The Man of Gold">
+  <main>
+    <div class="confetti-container" id="confetti"></div>
+    
+    <header>
+      <div class="crown">👑</div>
+      <h1>KIM</h1>
+      <p class="subtitle">The Man of Gold</p>
+      <p class="role">Digital Designer Extraordinaire</p>
+    </header>
+
+    <section class="intro">
+      <div class="gold-line"></div>
+      <p>Crafting digital experiences that shine. Turning pixels into gold since the dawn of the digital age.</p>
+      <div class="gold-line"></div>
+    </section>
+
+    <section class="portfolio">
+      <h2>Selected Works</h2>
+      <div class="portfolio-grid">
+        {portfolioItems.map((item, index) => (
+          <article class="portfolio-item" style={`animation-delay: ${index * 0.1}s`}>
+            <div class="item-number">{String(index + 1).padStart(2, '0')}</div>
+            <h3>{item.title}</h3>
+            <div class="item-meta">
+              <span class="category">{item.category}</span>
+              <span class="year">{item.year}</span>
+            </div>
+            <p>{item.description}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="quote">
+      <blockquote>
+        "Design is not just what it looks like. Design is how it <em>shines</em>."
+      </blockquote>
+      <cite>— Kim, probably</cite>
+    </section>
+
+    <footer>
+      <div class="gold-bar"></div>
+      <p>✨ Forever Golden ✨</p>
+    </footer>
+  </main>
+</Layout>
+
+<style>
+  :root {
+    --gold: #D4AF37;
+    --gold-light: #F4E4BA;
+    --gold-dark: #996515;
+    --black: #0a0a0a;
+    --white: #fafafa;
+  }
+
+  main {
+    min-height: 100vh;
+    background: var(--black);
+    color: var(--white);
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  .confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  header {
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    position: relative;
+  }
+
+  .crown {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: crownFloat 3s ease-in-out infinite, crownGlow 2s ease-in-out infinite, crownRotate 6s ease-in-out infinite;
+    display: inline-block;
+    filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.5));
+  }
+
+  @keyframes crownFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+
+  @keyframes crownGlow {
+    0%, 100% { filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.5)); }
+    50% { filter: drop-shadow(0 0 40px rgba(212, 175, 55, 0.9)) drop-shadow(0 0 60px rgba(244, 228, 186, 0.5)); }
+  }
+
+  @keyframes crownRotate {
+    0%, 100% { transform: translateY(0) rotate(-3deg) scale(1); }
+    25% { transform: translateY(-10px) rotate(3deg) scale(1.05); }
+    50% { transform: translateY(-15px) rotate(-2deg) scale(1.1); }
+    75% { transform: translateY(-8px) rotate(2deg) scale(1.05); }
+  }
+
+  h1 {
+    font-size: clamp(4rem, 15vw, 12rem);
+    font-weight: 200;
+    letter-spacing: 0.5em;
+    margin: 0;
+    padding-left: 0.5em;
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 60px rgba(212, 175, 55, 0.3);
+  }
+
+  .subtitle {
+    font-size: 1.5rem;
+    color: var(--gold);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin: 1rem 0 0.5rem;
+    font-weight: 300;
+  }
+
+  .role {
+    color: #666;
+    font-size: 1rem;
+    letter-spacing: 0.2em;
+  }
+
+  .intro {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+
+  .intro p {
+    font-size: 1.25rem;
+    line-height: 1.8;
+    color: #999;
+    font-weight: 300;
+  }
+
+  .gold-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 2rem 0;
+  }
+
+  .portfolio {
+    padding: 4rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .portfolio h2 {
+    text-align: center;
+    font-size: 0.875rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 400;
+    margin-bottom: 4rem;
+  }
+
+  .portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .portfolio-item {
+    background: rgba(212, 175, 55, 0.03);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    padding: 2rem;
+    transition: all 0.4s ease;
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .portfolio-item:hover {
+    border-color: var(--gold);
+    background: rgba(212, 175, 55, 0.08);
+    transform: translateY(-4px);
+  }
+
+  .item-number {
+    font-size: 0.75rem;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+    margin-bottom: 1rem;
+  }
+
+  .portfolio-item h3 {
+    font-size: 1.5rem;
+    font-weight: 400;
+    margin: 0 0 1rem;
+    color: var(--white);
+  }
+
+  .item-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+  }
+
+  .category {
+    color: var(--gold);
+  }
+
+  .year {
+    color: #666;
+  }
+
+  .portfolio-item p {
+    color: #888;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .quote {
+    text-align: center;
+    padding: 6rem 2rem;
+    background: linear-gradient(180deg, transparent, rgba(212, 175, 55, 0.05), transparent);
+  }
+
+  blockquote {
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    font-weight: 200;
+    font-style: italic;
+    color: var(--white);
+    max-width: 800px;
+    margin: 0 auto 1rem;
+    line-height: 1.6;
+  }
+
+  blockquote em {
+    color: var(--gold);
+    font-style: normal;
+  }
+
+  cite {
+    color: #666;
+    font-size: 0.875rem;
+    letter-spacing: 0.1em;
+  }
+
+  footer {
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+
+  .gold-bar {
+    width: 60px;
+    height: 3px;
+    background: var(--gold);
+    margin: 0 auto 2rem;
+  }
+
+  footer p {
+    color: var(--gold);
+    font-size: 0.875rem;
+    letter-spacing: 0.2em;
+  }
+</style>
+
+<script>
+  // Golden confetti animation
+  const confettiContainer = document.getElementById('confetti');
+  
+  function createConfetti() {
+    const confetti = document.createElement('div');
+    confetti.style.cssText = `
+      position: absolute;
+      width: ${Math.random() * 10 + 5}px;
+      height: ${Math.random() * 10 + 5}px;
+      background: linear-gradient(135deg, #F4E4BA, #D4AF37, #996515);
+      left: ${Math.random() * 100}vw;
+      top: -20px;
+      opacity: ${Math.random() * 0.7 + 0.3};
+      transform: rotate(${Math.random() * 360}deg);
+      animation: fall ${Math.random() * 3 + 4}s linear forwards;
+    `;
+    
+    confettiContainer?.appendChild(confetti);
+    
+    setTimeout(() => {
+      confetti.remove();
+    }, 7000);
+  }
+
+  // Add keyframes for falling animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes fall {
+      to {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Create confetti periodically
+  setInterval(createConfetti, 200);
+  
+  // Initial burst
+  for (let i = 0; i < 30; i++) {
+    setTimeout(createConfetti, i * 50);
+  }
+
+  // Parallax scroll effects
+  const crown = document.querySelector('.crown') as HTMLElement;
+  const h1 = document.querySelector('h1') as HTMLElement;
+  const subtitle = document.querySelector('.subtitle') as HTMLElement;
+  const intro = document.querySelector('.intro') as HTMLElement;
+  const quote = document.querySelector('.quote') as HTMLElement;
+  const portfolioItems = document.querySelectorAll('.portfolio-item');
+  const goldLines = document.querySelectorAll('.gold-line');
+
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    const windowHeight = window.innerHeight;
+
+    // Header parallax - crown moves faster
+    if (crown) {
+      crown.style.transform = `translateY(${scrollY * 0.3}px) rotate(${scrollY * 0.02}deg)`;
+    }
+
+    // Title moves slower for depth effect
+    if (h1) {
+      h1.style.transform = `translateY(${scrollY * 0.1}px)`;
+      h1.style.opacity = String(Math.max(0, 1 - scrollY / 400));
+    }
+
+    // Subtitle fades and moves
+    if (subtitle) {
+      subtitle.style.transform = `translateY(${scrollY * 0.15}px)`;
+      subtitle.style.opacity = String(Math.max(0, 1 - scrollY / 500));
+    }
+
+    // Intro section parallax
+    if (intro) {
+      const introRect = intro.getBoundingClientRect();
+      if (introRect.top < windowHeight && introRect.bottom > 0) {
+        const progress = (windowHeight - introRect.top) / (windowHeight + introRect.height);
+        intro.style.transform = `translateY(${(1 - progress) * 30}px)`;
+        intro.style.opacity = String(Math.min(1, progress * 2));
+      }
+    }
+
+    // Gold lines expand on scroll
+    goldLines.forEach((line) => {
+      const lineEl = line as HTMLElement;
+      const rect = lineEl.getBoundingClientRect();
+      if (rect.top < windowHeight * 0.8) {
+        lineEl.style.transform = 'scaleX(1)';
+        lineEl.style.opacity = '1';
+      }
+    });
+
+    // Portfolio items stagger reveal
+    portfolioItems.forEach((item, index) => {
+      const itemEl = item as HTMLElement;
+      const rect = itemEl.getBoundingClientRect();
+      if (rect.top < windowHeight * 0.85) {
+        itemEl.style.opacity = '1';
+        itemEl.style.transform = 'translateY(0)';
+      }
+    });
+
+    // Quote parallax
+    if (quote) {
+      const quoteRect = quote.getBoundingClientRect();
+      if (quoteRect.top < windowHeight && quoteRect.bottom > 0) {
+        const progress = (windowHeight - quoteRect.top) / windowHeight;
+        quote.style.backgroundPosition = `50% ${50 + progress * 20}%`;
+      }
+    }
+  });
+
+  // Initialize gold lines as hidden
+  goldLines.forEach((line) => {
+    const lineEl = line as HTMLElement;
+    lineEl.style.transform = 'scaleX(0)';
+    lineEl.style.opacity = '0';
+    lineEl.style.transition = 'transform 0.8s ease, opacity 0.8s ease';
+  });
+</script>
