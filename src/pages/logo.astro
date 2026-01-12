@@ -625,7 +625,7 @@ const stretchedPaths = [
       gsap.to(progress, {
         t: 1,
         duration,
-        ease: 'power2.inOut',
+        ease: 'power2.in',
         onUpdate: () => {
           const interpolatedPaths = normalPaths.map((_, i) => 
             interpolatePaths(parsedNormalPaths[i], parsedStretchedPaths[i], progress.t)
@@ -706,7 +706,7 @@ const stretchedPaths = [
       
       // Move all flows along their curves
       flows.forEach(flow => {
-        flow.moveAlongCurve(-0.002);
+        flow.moveAlongCurve(-0.004);
       });
       
       // Update controls
