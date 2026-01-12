@@ -130,11 +130,13 @@ const stretchedPaths = [
   }
 
   #three-container {
-    width: 100%;
-    height: 400px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     background: #111;
-    border-radius: 8px;
-    overflow: hidden;
+    z-index: 100;
   }
 </style>
 
@@ -357,20 +359,36 @@ const stretchedPaths = [
     controls.autoRotate = true;
     controls.autoRotateSpeed = 0.5;
 
-    // Create a circular path
-    const radius = 26;
-    const segments = 200; // Enough for smooth curve
-    const curvePoints: THREE.Vector3[] = [];
+    // Circle parameters
+    const circleParams = {
+      radius: 22,
+      ySpacing: 3
+    };
+    const segments = 200;
+    const numCircles = 9;
     
-    for (let i = 0; i < segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
-      const y = 0; // Perfectly flat circle
-      curvePoints.push(new THREE.Vector3(x, y, z));
+    let curves: THREE.CatmullRomCurve3[] = [];
+    
+    // Function to create/rebuild curves
+    function buildCurves() {
+      curves = [];
+      for (let c = 0; c < numCircles; c++) {
+        const curvePoints: THREE.Vector3[] = [];
+        const yOffset = (c - Math.floor(numCircles / 2)) * circleParams.ySpacing;
+        
+        for (let i = 0; i < segments; i++) {
+          const angle = (i / segments) * Math.PI * 2;
+          const x = Math.cos(angle) * circleParams.radius;
+          const z = Math.sin(angle) * circleParams.radius;
+          curvePoints.push(new THREE.Vector3(x, yOffset, z));
+        }
+        
+        curves.push(new THREE.CatmullRomCurve3(curvePoints, true, 'catmullrom', 0.5));
+      }
     }
     
-    const curve = new THREE.CatmullRomCurve3(curvePoints, true, 'catmullrom', 0.5);
+    // Initial curve build
+    buildCurves();
 
     // SVG Loader
     const loader = new SVGLoader();
@@ -389,11 +407,11 @@ const stretchedPaths = [
       offsetX: 16,
       offsetY: 0.4,
       scale: 0.03,
-      tessellation: 0.5
+      tessellation: 2
     };
 
-    // Current flow reference
-    let flow: Flow | null = null;
+    // Current flow references (one per circle)
+    let flows: Flow[] = [];
     let currentPaths = [...stretchedPaths]; // Start with stretched
 
     // Tessellate geometry by subdividing triangles for smooth curve bending
@@ -465,7 +483,7 @@ const stretchedPaths = [
     }
 
     // Create geometry from SVG paths
-    function createLogoGeometry(paths: string[]): THREE.BufferGeometry {
+    function createLogoGeometry(paths: string[], offsetX: number = params.offsetX): THREE.BufferGeometry {
       const geometries: THREE.BufferGeometry[] = [];
       
       // Parse each path and create extruded geometry
@@ -525,44 +543,58 @@ const stretchedPaths = [
       // Tessellate for smooth curve bending
       mergedGeometry = tessellateGeometry(mergedGeometry, params.tessellation);
       
-      // Offset for curve
-      mergedGeometry.translate(params.offsetX, 0, 0);
+      // Offset for curve (different for each circle)
+      mergedGeometry.translate(offsetX, 0, 0);
 
       return mergedGeometry;
     }
 
-    // Initialize with current paths
-    function initFlow() {
-      const geometry = createLogoGeometry(currentPaths);
-      const mesh = new THREE.Mesh(geometry, material);
-      
-      flow = new Flow(mesh);
-      flow.updateCurve(0, curve);
-      scene.add(flow.object3D);
+    // Initialize with current paths - create flow for each curve
+    function initFlows() {
+      flows = [];
+      curves.forEach((curveItem, index) => {
+        // Stagger offsetX for each circle
+        const circleOffsetX = params.offsetX + (index * 4);
+        const geometry = createLogoGeometry(currentPaths, circleOffsetX);
+        const mesh = new THREE.Mesh(geometry, material.clone());
+        
+        const flow = new Flow(mesh);
+        flow.updateCurve(0, curveItem);
+        scene.add(flow.object3D);
+        flows.push(flow);
+      });
     }
 
-    // Update geometry (recreate flow with new paths)
+    // Update geometry (recreate all flows with new paths)
     function updateLogoGeometry(paths: string[]) {
-      if (flow) {
+      // Remove existing flows
+      flows.forEach(flow => {
         scene.remove(flow.object3D);
-        flow.object3D.traverse((child) => {
+        flow.object3D.traverse((child: THREE.Object3D) => {
           if (child instanceof THREE.Mesh) {
             child.geometry.dispose();
           }
         });
-      }
+      });
       
       currentPaths = paths;
-      const geometry = createLogoGeometry(paths);
-      const mesh = new THREE.Mesh(geometry, material);
+      flows = [];
       
-      flow = new Flow(mesh);
-      flow.updateCurve(0, curve);
-      scene.add(flow.object3D);
+      curves.forEach((curveItem, index) => {
+        // Stagger offsetX for each circle
+        const circleOffsetX = params.offsetX + (index * 4);
+        const geometry = createLogoGeometry(paths, circleOffsetX);
+        const mesh = new THREE.Mesh(geometry, material.clone());
+        
+        const flow = new Flow(mesh);
+        flow.updateCurve(0, curveItem);
+        scene.add(flow.object3D);
+        flows.push(flow);
+      });
     }
 
     // Initialize
-    initFlow();
+    initFlows();
 
     // Track 3D animation state (starts stretched)
     let isStretched3D = true;
@@ -638,14 +670,28 @@ const stretchedPaths = [
       }
     });
 
+    // FPS Counter
+    let frameCount = 0;
+    let lastTime = performance.now();
+    const fpsDisplay = { fps: 0 };
+
     // Render loop
     function animate() {
       requestAnimationFrame(animate);
       
-      // Move along curve
-      if (flow) {
-        flow.moveAlongCurve(0.002);
+      // Update FPS
+      frameCount++;
+      const now = performance.now();
+      if (now - lastTime >= 1000) {
+        fpsDisplay.fps = Math.round(frameCount * 1000 / (now - lastTime));
+        frameCount = 0;
+        lastTime = now;
       }
+      
+      // Move all flows along their curves
+      flows.forEach(flow => {
+        flow.moveAlongCurve(0.002);
+      });
       
       // Update controls
       controls.update();
@@ -656,6 +702,50 @@ const stretchedPaths = [
 
     // GUI Setup
     const gui = new GUI();
+    
+    // Animation controls
+    const animationParams = {
+      animationLoop: false,
+      toggleAnimation: function() {
+        this.animationLoop = !this.animationLoop;
+        if (this.animationLoop) {
+          runAnimationLoop();
+        }
+      }
+    };
+    
+    function runAnimationLoop() {
+      if (!animationParams.animationLoop) return;
+      if (!isStretched3D && !isAnimating3D) {
+        animate3DToStretched(2);
+        setTimeout(() => animationParams.animationLoop && runAnimationLoop(), 2500);
+      } else if (isStretched3D && !isAnimating3D) {
+        animate3DToNormal(2);
+        setTimeout(() => animationParams.animationLoop && runAnimationLoop(), 2500);
+      } else {
+        setTimeout(() => animationParams.animationLoop && runAnimationLoop(), 100);
+      }
+    }
+    
+    const animFolder = gui.addFolder('Animation');
+    animFolder.add(animationParams, 'animationLoop').name('Loop Animation').onChange((value: boolean) => {
+      if (value) runAnimationLoop();
+    });
+    animFolder.open();
+    
+    // Circle settings
+    function rebuildCurvesAndFlows() {
+      buildCurves();
+      updateLogoGeometry(currentPaths);
+    }
+    
+    const circleFolder = gui.addFolder('Circle');
+    circleFolder.add(circleParams, 'radius', 5, 60, 1).name('Radius').onChange(rebuildCurvesAndFlows);
+    circleFolder.add(circleParams, 'ySpacing', 1, 10, 0.5).name('Y Spacing').onChange(rebuildCurvesAndFlows);
+    circleFolder.open();
+    
+    // FPS display
+    gui.add(fpsDisplay, 'fps').name('FPS').listen().disable();
     
     const rotationFolder = gui.addFolder('Rotation');
     rotationFolder.add(params, 'rotateX', -Math.PI, Math.PI, 0.01).name('Rotate X').onChange(rebuildGeometry);
@@ -669,7 +759,7 @@ const stretchedPaths = [
     positionFolder.add(params, 'scale', 0.01, 0.1, 0.001).name('Scale').onChange(rebuildGeometry);
     
     const qualityFolder = gui.addFolder('Quality');
-    qualityFolder.add(params, 'tessellation', 0.1, 2, 0.1).name('Tessellation').onChange(rebuildGeometry);
+    qualityFolder.add(params, 'tessellation', 0, 10, 0.1).name('Tessellation').onChange(rebuildGeometry);
     
     function rebuildGeometry() {
       updateLogoGeometry(currentPaths);
