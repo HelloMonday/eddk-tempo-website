@@ -588,6 +588,12 @@ const stretchedPaths = [
       
       // Tessellate for smooth curve bending
       mergedGeometry = tessellateGeometry(mergedGeometry, params.tessellation);
+
+      mergedGeometry.computeBoundingBox();
+      {
+        const box = mergedGeometry.boundingBox!;
+        mergedGeometry.translate(-box.max.x, 0, 0);
+      }
       
       // Offset for curve (different for each circle)
       mergedGeometry.translate(offsetX, 0, 0);
