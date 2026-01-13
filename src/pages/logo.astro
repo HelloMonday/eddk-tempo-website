@@ -367,7 +367,9 @@ const stretchedPaths = [
       squareness: 0, // 0 = circle, 1 = square
       aspectRatio: 1, // 1 = equal, <1 = wide, >1 = tall
       sphereAmount: 0, // 0 = cylinder, 1 = sphere-like
-      circleOffsetX: 0 // offset stagger per ring
+      circleOffsetX: 0, // offset stagger per ring
+      scaleRotationOffset: 0, // offset amount to align scaled rings
+      scaleRotationPower: 1 // power/exponent for how offset scales (1=linear, 2=quadratic)
     };
     const segments = 200;
     
@@ -566,6 +568,12 @@ const stretchedPaths = [
         mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3));
       }
 
+      // Center geometry on X axis before scaling (so scale happens around center)
+      mergedGeometry.computeBoundingBox();
+      const box = mergedGeometry.boundingBox!;
+      const centerX = (box.max.x + box.min.x) / 2;
+      mergedGeometry.translate(-centerX, 0, 0);
+
       // Scale and position for curve (multiply by curveScale to maintain letter spacing)
       const finalScale = params.scale * curveScale;
       mergedGeometry.scale(finalScale, -finalScale, finalScale);
@@ -607,13 +615,28 @@ const stretchedPaths = [
         const sphereScale = getSphereScale(index, circleParams.numCircles);
         const curveScale = 1 - circleParams.sphereAmount + circleParams.sphereAmount * sphereScale;
         
-        // Stagger offsetX for each circle
-        const offsetX = params.offsetX + (index * circleParams.circleOffsetX);
-        const geometry = createLogoGeometry(currentPaths, offsetX, curveScale);
+        // Create geometry with no X offset (centered), scale for letter spacing
+        const geometry = createLogoGeometry(currentPaths, 0, curveScale);
         const mesh = new THREE.Mesh(geometry, material.clone());
         
         const flow = new Flow(mesh);
         flow.updateCurve(0, curveItem);
+        {
+          const referenceCurve = curves[Math.floor(circleParams.numCircles / 2)];
+          const referenceCurveLength = referenceCurve ? referenceCurve.getLength() : curveItem.getLength();
+          const curveLength = curveItem.getLength();
+          flow.uniforms.spineOffset.value = flow.uniforms.spineOffset.value * (curveLength / referenceCurveLength);
+        }
+        
+        // Position along curve (ABSOLUTE, not additive)
+        // scaleRotationOffset: amount, scaleRotationPower: how it scales with distance from center
+        const scaleDiff = 1 - curveScale; // 0 for center ring, positive for edge rings
+        const scaleAdjustment = Math.pow(scaleDiff, circleParams.scaleRotationPower) * circleParams.scaleRotationOffset;
+        const referenceCurve = curves[Math.floor(circleParams.numCircles / 2)];
+        const referenceCurveLength = referenceCurve ? referenceCurve.getLength() : curveItem.getLength();
+        const normalizedOffset = (params.offsetX + index * circleParams.circleOffsetX) / referenceCurveLength + scaleAdjustment;
+        flow.uniforms.pathOffset.value = ((normalizedOffset % 1) + 1) % 1;
+        
         group.add(flow.object3D);
         
         // Add red sphere at the center of the curve
@@ -652,13 +675,28 @@ const stretchedPaths = [
         const sphereScale = getSphereScale(index, circleParams.numCircles);
         const curveScale = 1 - circleParams.sphereAmount + circleParams.sphereAmount * sphereScale;
         
-        // Stagger offsetX for each circle
-        const offsetX = params.offsetX + (index * circleParams.circleOffsetX);
-        const geometry = createLogoGeometry(paths, offsetX, curveScale);
+        // Create geometry with no X offset (centered), scale for letter spacing
+        const geometry = createLogoGeometry(paths, 0, curveScale);
         const mesh = new THREE.Mesh(geometry, material.clone());
         
         const flow = new Flow(mesh);
         flow.updateCurve(0, curveItem);
+        {
+          const referenceCurve = curves[Math.floor(circleParams.numCircles / 2)];
+          const referenceCurveLength = referenceCurve ? referenceCurve.getLength() : curveItem.getLength();
+          const curveLength = curveItem.getLength();
+          flow.uniforms.spineOffset.value = flow.uniforms.spineOffset.value * (curveLength / referenceCurveLength);
+        }
+        
+        // Position along curve (ABSOLUTE, not additive)
+        // scaleRotationOffset: amount, scaleRotationPower: how it scales with distance from center
+        const scaleDiff = 1 - curveScale; // 0 for center ring, positive for edge rings
+        const scaleAdjustment = Math.pow(scaleDiff, circleParams.scaleRotationPower) * circleParams.scaleRotationOffset;
+        const referenceCurve = curves[Math.floor(circleParams.numCircles / 2)];
+        const referenceCurveLength = referenceCurve ? referenceCurve.getLength() : curveItem.getLength();
+        const normalizedOffset = (params.offsetX + index * circleParams.circleOffsetX) / referenceCurveLength + scaleAdjustment;
+        flow.uniforms.pathOffset.value = ((normalizedOffset % 1) + 1) % 1;
+        
         group.add(flow.object3D);
         
         // Add red sphere at the center of the curve
@@ -826,8 +864,9 @@ const stretchedPaths = [
     circleFolder.add(circleParams, 'squareness', 0, 1, 0.01).name('Squareness').onChange(rebuildCurvesAndFlows);
     circleFolder.add(circleParams, 'aspectRatio', 0.25, 4, 0.01).name('Aspect Ratio').onChange(rebuildCurvesAndFlows);
     circleFolder.add(circleParams, 'circleOffsetX', 0, 10, 0.5).name('Ring Offset X').onChange(rebuildCurvesAndFlows);
+    circleFolder.add(circleParams, 'scaleRotationOffset', -4, 4, 0.001).name('Scale Rot Offset').onChange(rebuildCurvesAndFlows);
+    circleFolder.add(circleParams, 'scaleRotationPower', 0.1, 4, 0.01).name('Scale Rot Power').onChange(rebuildCurvesAndFlows);
     
-    // Animate sphere effect by rebuilding curves at different radii
     const sphereScaleParams = {
       scaleDownCircles: function() {
         const targetAmount = circleParams.sphereAmount === 0 ? 1 : 0;
