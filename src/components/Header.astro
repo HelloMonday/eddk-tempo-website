@@ -1,0 +1,672 @@
+---
+import { getHeader } from "../lib/contentful-api";
+import type { Header as HeaderType } from "../lib/contentful-types.generated";
+
+interface Props {
+  header?: HeaderType | null;
+}
+
+// Allow passing header data directly or fetch it
+let { header } = Astro.props;
+
+if (!header) {
+  header = await getHeader();
+}
+
+// Fallback header if no Contentful data
+if (!header) {
+  header = {
+    name: "Default Header",
+    navItems: [
+      {
+        label: "Enterprise",
+        url: "#",
+        links: [
+          { label: "Overview", url: "#/enterprise/overview" },
+          { label: "Use Cases", url: "#/enterprise/use-cases" },
+          { label: "Case Studies", url: "#/enterprise/case-studies" },
+          {
+            label: "Security & Compliance",
+            url: "#/enterprise/security-compliance",
+          },
+        ],
+      },
+      {
+        label: "Developers",
+        url: "#",
+        links: [
+          { label: "Overview", url: "#/developers/overview" },
+          { label: "Documentation", url: "#/developers/docs" },
+          { label: "API Reference", url: "#/developers/api" },
+          { label: "SDKs", url: "#/developers/sdks" },
+        ],
+      },
+      {
+        label: "Company",
+        url: "#",
+        links: [
+          { label: "About", url: "#/company/about" },
+          { label: "Careers", url: "#/company/careers" },
+          { label: "Press", url: "#/company/press" },
+          { label: "Contact", url: "#/company/contact" },
+        ],
+      },
+      { label: "Blog", url: "/blog" },
+      { label: "Contact Sales", url: "#" },
+    ],
+    loginText: "Log in",
+    loginUrl: "#",
+  };
+}
+---
+
+<header class="site-header">
+  <div class="header-container">
+    {/* Logo */}
+    <div class="header-logo">
+      <a href="/">
+        {
+          header.logo ? (
+            <img
+              src={header.logo.url}
+              alt={header.logo.title || "Site Logo"}
+              width={header.logo.width}
+              height={header.logo.height}
+            />
+          ) : (
+            <img
+              src="/images/logo.svg"
+              alt="Tempo Logo"
+              width="40"
+              height="40"
+            />
+          )
+        }
+      </a>
+    </div>
+
+    {/* Desktop Navigation */}
+    {
+      header.navItems && header.navItems.length > 0 && (
+        <nav class="header-nav desktop-nav" aria-label="Main navigation">
+          <ul class="nav-list">
+            {header.navItems.map((item) => {
+              // Check if it's a NavGroup (has links property)
+              if ("links" in item && item.links && item.links.length > 0) {
+                return (
+                  <li class="nav-item nav-group">
+                    <button
+                      class="nav-link nav-group-trigger"
+                      aria-expanded="false"
+                      aria-haspopup="true"
+                    >
+                      {item.label}
+                      <img
+                        src="/images/accordion-down.svg"
+                        alt=""
+                        class="dropdown-icon"
+                        width="16"
+                        height="16"
+                      />
+                    </button>
+                    <ul class="dropdown-menu">
+                      {item.links.map((link) => (
+                        <li>
+                          <a href={link.url} class="dropdown-link">
+                            {link.label}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                );
+              } else if ("url" in item && item.url) {
+                // It's a NavLink
+                return (
+                  <li class="nav-item">
+                    <a href={item.url} class="nav-link">
+                      {item.label}
+                    </a>
+                  </li>
+                );
+              }
+            })}
+          </ul>
+        </nav>
+      )
+    }
+
+    {/* Right side actions */}
+    <div class="header-actions">
+      {/* Login Link */}
+      {
+        header.loginText && header.loginUrl && (
+          <a href={header.loginUrl} class="login-link">
+            {header.loginText}
+          </a>
+        )
+      }
+
+      {/* Search Button */}
+      <button class="search-button" aria-label="Search">
+        <img src="/images/search-icon.svg" alt="" width="24" height="24" />
+      </button>
+    </div>
+
+    {/* Mobile Menu Button */}
+    <button
+      class="mobile-menu-button"
+      aria-label="Toggle menu"
+      aria-expanded="false"
+    >
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+  </div>
+
+  {/* Mobile Navigation */}
+  {
+    header.navItems && header.navItems.length > 0 && (
+      <nav class="header-nav mobile-nav" aria-label="Mobile navigation">
+        <ul class="mobile-nav-list">
+          {header.navItems.map((item) => {
+            if ("links" in item && item.links && item.links.length > 0) {
+              return (
+                <li class="mobile-nav-item mobile-nav-group">
+                  <button
+                    class="mobile-nav-link mobile-nav-group-trigger"
+                    aria-expanded="false"
+                  >
+                    {item.label}
+                    <img
+                      src="/images/accordion-down.svg"
+                      alt=""
+                      class="dropdown-icon"
+                      width="16"
+                      height="16"
+                    />
+                  </button>
+                  <ul class="mobile-dropdown-menu">
+                    {item.links.map((link) => (
+                      <li>
+                        <a href={link.url} class="mobile-dropdown-link">
+                          {link.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              );
+            } else if ("url" in item && item.url) {
+              return (
+                <li class="mobile-nav-item">
+                  <a href={item.url} class="mobile-nav-link">
+                    {item.label}
+                  </a>
+                </li>
+              );
+            }
+          })}
+          {header.loginText && header.loginUrl && (
+            <li class="mobile-nav-item mobile-login-item">
+              <a href={header.loginUrl} class="mobile-login-button">
+                {header.loginText}
+              </a>
+            </li>
+          )}
+        </ul>
+      </nav>
+    )
+  }
+</header>
+
+<style>
+  .site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #f3f3f3;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .header-container {
+    margin: 0 auto;
+    padding: 12px 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+
+  /* Logo */
+  .header-logo a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+
+  .header-logo img {
+    width: 40px;
+    height: 40px;
+    display: block;
+  }
+
+  /* Desktop Navigation */
+  .desktop-nav {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  .nav-list {
+    display: flex;
+    list-style: none;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .nav-item {
+    position: relative;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    height: 40px;
+    color: #000;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0.14px;
+    transition: opacity 0.2s ease;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .nav-link:hover {
+    opacity: 0.7;
+  }
+
+  .nav-group-trigger {
+    position: relative;
+  }
+
+  .dropdown-icon {
+    transition: transform 0.2s ease;
+    width: 16px;
+    height: 16px;
+  }
+
+  .nav-group-trigger[aria-expanded="true"] .dropdown-icon {
+    transform: scaleY(-1) rotate(180deg);
+  }
+
+  /* Dropdown Menu */
+  .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 240px;
+    margin-top: 12px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px 0;
+    list-style: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease,
+      visibility 0.2s;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .nav-group:hover .dropdown-menu,
+  .nav-group-trigger[aria-expanded="true"] + .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .dropdown-menu li {
+    list-style: none;
+  }
+
+  .dropdown-link {
+    display: block;
+    padding: 10px 24px;
+    color: #000;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    transition: background-color 0.2s ease;
+  }
+
+  /* First item styled as header/overview */
+  .dropdown-menu li:first-child .dropdown-link {
+    color: #999;
+    font-size: 13px;
+    padding-top: 0;
+  }
+
+  .dropdown-link:hover {
+    background: #f8f8f8;
+  }
+
+  /* Subtle hover state */
+  .dropdown-menu li:first-child .dropdown-link:hover {
+    background: transparent;
+  }
+
+  /* Header Actions */
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .login-link {
+    padding: 8px 12px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    color: #000;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0.14px;
+    transition: opacity 0.2s ease;
+  }
+
+  .login-link:hover {
+    opacity: 0.7;
+  }
+
+  .search-button {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+
+  .search-button:hover {
+    opacity: 0.7;
+  }
+
+  .search-button img {
+    width: 24px;
+    height: 24px;
+    display: block;
+  }
+
+  /* Mobile Menu Button */
+  .mobile-menu-button {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 1001;
+  }
+
+  .hamburger-line {
+    width: 24px;
+    height: 2px;
+    background: #000;
+    border-radius: 2px;
+    transition:
+      transform 0.3s ease,
+      opacity 0.3s ease;
+  }
+
+  .mobile-menu-button[aria-expanded="true"] .hamburger-line:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+  }
+
+  .mobile-menu-button[aria-expanded="true"] .hamburger-line:nth-child(2) {
+    opacity: 0;
+  }
+
+  .mobile-menu-button[aria-expanded="true"] .hamburger-line:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+  }
+
+  /* Mobile Navigation */
+  .mobile-nav {
+    display: none;
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.3s ease,
+      visibility 0.3s;
+    overflow-y: auto;
+    border-top: 1px solid #ccc;
+  }
+
+  .mobile-nav.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .mobile-nav-list {
+    list-style: none;
+    padding: 1.5rem;
+  }
+
+  .mobile-nav-item {
+    border-bottom: 1px solid #ccc;
+  }
+
+  .mobile-nav-item:last-child {
+    border-bottom: none;
+  }
+
+  .mobile-nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+    color: #000;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .mobile-dropdown-menu {
+    list-style: none;
+    padding-left: 1rem;
+    padding-top: 0.5rem;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  .mobile-nav-group-trigger[aria-expanded="true"] + .mobile-dropdown-menu {
+    max-height: 500px;
+  }
+
+  .mobile-nav-group-trigger .dropdown-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .mobile-nav-group-trigger[aria-expanded="true"] .dropdown-icon {
+    transform: scaleY(-1) rotate(180deg);
+  }
+
+  .mobile-dropdown-menu li {
+    list-style: none;
+  }
+
+  .mobile-dropdown-link {
+    display: block;
+    padding: 0.75rem 0;
+    color: #666;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s ease;
+  }
+
+  .mobile-dropdown-menu li:first-child .mobile-dropdown-link {
+    color: #999;
+    font-size: 13px;
+  }
+
+  .mobile-dropdown-link:hover {
+    color: #000;
+  }
+
+  .mobile-login-item {
+    margin-top: 1rem;
+    border: none;
+  }
+
+  .mobile-login-button {
+    display: block;
+    padding: 1rem;
+    background: #000;
+    color: #fff;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  /* Tablet and Mobile */
+  @media (max-width: 968px) {
+    .desktop-nav,
+    .header-actions {
+      display: none;
+    }
+
+    .mobile-menu-button {
+      display: flex;
+    }
+
+    .mobile-nav {
+      display: block;
+    }
+
+    .header-container {
+      padding: 12px 24px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .header-container {
+      padding: 12px 16px;
+    }
+
+    .header-logo img {
+      width: 32px;
+      height: 32px;
+    }
+
+    .mobile-nav {
+      top: 56px;
+    }
+  }
+</style>
+
+<script>
+  // Mobile menu toggle
+  const mobileMenuButton = document.querySelector(".mobile-menu-button");
+  const mobileNav = document.querySelector(".mobile-nav");
+
+  if (mobileMenuButton && mobileNav) {
+    mobileMenuButton.addEventListener("click", () => {
+      const isExpanded =
+        mobileMenuButton.getAttribute("aria-expanded") === "true";
+      mobileMenuButton.setAttribute("aria-expanded", String(!isExpanded));
+      mobileNav.classList.toggle("active");
+      document.body.style.overflow = isExpanded ? "" : "hidden";
+    });
+  }
+
+  // Mobile dropdown toggles
+  const mobileGroupTriggers = document.querySelectorAll(
+    ".mobile-nav-group-trigger"
+  );
+  mobileGroupTriggers.forEach((trigger) => {
+    trigger.addEventListener("click", () => {
+      const isExpanded = trigger.getAttribute("aria-expanded") === "true";
+      trigger.setAttribute("aria-expanded", String(!isExpanded));
+    });
+  });
+
+  // Desktop dropdown toggles (for keyboard accessibility)
+  const desktopGroupTriggers = document.querySelectorAll(".nav-group-trigger");
+  desktopGroupTriggers.forEach((trigger) => {
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isExpanded = trigger.getAttribute("aria-expanded") === "true";
+
+      // Close all other dropdowns
+      desktopGroupTriggers.forEach((t) => {
+        if (t !== trigger) {
+          t.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      trigger.setAttribute("aria-expanded", String(!isExpanded));
+    });
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest(".nav-group")) {
+      desktopGroupTriggers.forEach((trigger) => {
+        trigger.setAttribute("aria-expanded", "false");
+      });
+    }
+  });
+
+  // Handle escape key to close dropdowns
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      desktopGroupTriggers.forEach((trigger) => {
+        trigger.setAttribute("aria-expanded", "false");
+      });
+
+      if (mobileNav?.classList.contains("active")) {
+        mobileMenuButton?.setAttribute("aria-expanded", "false");
+        mobileNav.classList.remove("active");
+        document.body.style.overflow = "";
+      }
+    }
+  });
+</script>

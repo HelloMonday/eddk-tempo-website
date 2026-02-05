@@ -226,12 +226,12 @@ const { Content } = await render(post);
 ```astro
 ---
 // src/layouts/Base.astro
-import { ClientRouter } from 'astro:transitions';
+import { ViewTransitions } from 'astro:transitions';
 ---
 
 <html>
   <head>
-    <ClientRouter />
+    <ViewTransitions />
   </head>
   <body>
     <header transition:persist>

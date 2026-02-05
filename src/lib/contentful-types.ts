@@ -2,6 +2,46 @@ import type { Entry, Asset, EntryFieldTypes } from 'contentful';
 import type { Document } from '@contentful/rich-text-types';
 
 // Contentful Entry Skeleton Types
+
+// Navigation Link
+export interface NavLinkSkeleton {
+  contentTypeId: 'navLink';
+  fields: {
+    label: EntryFieldTypes.Text;
+    url: EntryFieldTypes.Text;
+  };
+}
+
+// Navigation Group (dropdown with multiple links)
+export interface NavGroupSkeleton {
+  contentTypeId: 'navGroup';
+  fields: {
+    label: EntryFieldTypes.Text;
+    links: EntryFieldTypes.Array<EntryFieldTypes.EntryLink<NavLinkSkeleton>>;
+  };
+}
+
+// Header
+export interface HeaderSkeleton {
+  contentTypeId: 'header';
+  fields: {
+    name: EntryFieldTypes.Text;
+    logo?: EntryFieldTypes.AssetLink;
+    navItems?: EntryFieldTypes.Array<EntryFieldTypes.EntryLink<NavLinkSkeleton | NavGroupSkeleton>>;
+    loginText?: EntryFieldTypes.Text;
+    loginUrl?: EntryFieldTypes.Text;
+  };
+}
+
+// Global Settings
+export interface GlobalSkeleton {
+  contentTypeId: 'global';
+  fields: {
+    name: EntryFieldTypes.Text;
+    header?: EntryFieldTypes.EntryLink<HeaderSkeleton>;
+  };
+}
+
 export interface BlogPostSkeleton {
   contentTypeId: 'blogPost';
   fields: {
@@ -53,6 +93,38 @@ export interface PageContent {
   metaDescription?: string;
 }
 
+// Navigation types
+export interface NavLink {
+  label: string;
+  url: string;
+}
+
+export interface NavGroup {
+  label: string;
+  links: NavLink[];
+}
+
+export type NavItem = NavLink | NavGroup;
+
+export interface Header {
+  name: string;
+  logo?: {
+    url: string;
+    title: string;
+    description?: string;
+    width: number;
+    height: number;
+  };
+  navItems: NavItem[];
+  loginText?: string;
+  loginUrl?: string;
+}
+
+export interface Global {
+  name: string;
+  header?: Header;
+}
+
 // Helper to extract image data from Contentful Asset
 export function parseAsset(asset: Asset<undefined, string> | undefined): BlogPost['featuredImage'] | undefined {
   if (!asset?.fields?.file) return undefined;
@@ -89,5 +161,65 @@ export function parsePageContent(entry: Entry<PageContentSkeleton, undefined, st
     subtitle: entry.fields.subtitle as string | undefined,
     description: entry.fields.description as string | undefined,
     metaDescription: entry.fields.metaDescription as string | undefined,
+  };
+}
+
+// Type guard to check if nav item is a NavGroup
+export function isNavGroup(item: NavItem): item is NavGroup {
+  return 'links' in item && Array.isArray(item.links);
+}
+
+// Transform Contentful entry to our NavLink type
+export function parseNavLink(entry: Entry<NavLinkSkeleton, undefined, string>): NavLink {
+  return {
+    label: entry.fields.label as string,
+    url: entry.fields.url as string,
+  };
+}
+
+// Transform Contentful entry to our NavGroup type
+export function parseNavGroup(entry: Entry<NavGroupSkeleton, undefined, string>): NavGroup {
+  const links = (entry.fields.links || []) as Entry<NavLinkSkeleton, undefined, string>[];
+  return {
+    label: entry.fields.label as string,
+    links: links.map(parseNavLink),
+  };
+}
+
+// Transform Contentful nav item entry to NavItem
+export function parseNavItem(
+  entry: Entry<NavLinkSkeleton | NavGroupSkeleton, undefined, string>
+): NavItem {
+  const contentType = entry.sys.contentType.sys.id;
+  if (contentType === 'navGroup') {
+    return parseNavGroup(entry as Entry<NavGroupSkeleton, undefined, string>);
+  }
+  return parseNavLink(entry as Entry<NavLinkSkeleton, undefined, string>);
+}
+
+// Transform Contentful entry to our Header type
+export function parseHeader(entry: Entry<HeaderSkeleton, undefined, string>): Header {
+  const navItems = (entry.fields.navItems || []) as Entry<
+    NavLinkSkeleton | NavGroupSkeleton,
+    undefined,
+    string
+  >[];
+
+  return {
+    name: entry.fields.name as string,
+    logo: parseAsset(entry.fields.logo as Asset<undefined, string> | undefined),
+    navItems: navItems.map(parseNavItem),
+    loginText: entry.fields.loginText as string | undefined,
+    loginUrl: entry.fields.loginUrl as string | undefined,
+  };
+}
+
+// Transform Contentful entry to our Global type
+export function parseGlobal(entry: Entry<GlobalSkeleton, undefined, string>): Global {
+  const headerEntry = entry.fields.header as Entry<HeaderSkeleton, undefined, string> | undefined;
+
+  return {
+    name: entry.fields.name as string,
+    header: headerEntry ? parseHeader(headerEntry) : undefined,
   };
 }
