@@ -1,0 +1,231 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getAllBlogPosts } from "../../lib/contentful-api";
+import type { BlogPost } from "../../lib/contentful-types";
+
+const posts: BlogPost[] = await getAllBlogPosts();
+
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+---
+
+<Layout title="Blog">
+  <main>
+    <div class="container">
+      <header>
+        <h1>Blog</h1>
+        <p class="description">Latest articles and updates</p>
+      </header>
+
+      {
+        posts.length === 0 ? (
+          <div class="empty-state">
+            <p>No blog posts yet.</p>
+            <p class="hint">Add blog posts in Contentful to see them here.</p>
+          </div>
+        ) : (
+          <div class="posts-grid">
+            {posts.map((post) => (
+              <article class="post-card">
+                {post.featuredImage && (
+                  <a href={`/blog/${post.slug}`} class="post-image">
+                    <img
+                      src={post.featuredImage.url}
+                      alt={post.featuredImage.title}
+                      width={post.featuredImage.width}
+                      height={post.featuredImage.height}
+                      loading="lazy"
+                    />
+                  </a>
+                )}
+                <div class="post-content">
+                  <time datetime={post.publishDate}>
+                    {formatDate(post.publishDate)}
+                  </time>
+                  <h2>
+                    <a href={`/blog/${post.slug}`}>{post.title}</a>
+                  </h2>
+                  {post.excerpt && <p class="excerpt">{post.excerpt}</p>}
+                  {post.tags && post.tags.length > 0 && (
+                    <div class="tags">
+                      {post.tags.map((tag) => (
+                        <span class="tag">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  {post.author && <p class="author">By {post.author}</p>}
+                </div>
+              </article>
+            ))}
+          </div>
+        )
+      }
+
+      <nav class="back-link">
+        <a href="/">&larr; Back to Home</a>
+      </nav>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  main {
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 3rem;
+  }
+
+  h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .description {
+    color: #888;
+    font-size: 1.25rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #222;
+  }
+
+  .empty-state p {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state .hint {
+    color: #666;
+    font-size: 1rem;
+  }
+
+  .posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+  }
+
+  .post-card {
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #222;
+    overflow: hidden;
+    transition:
+      border-color 0.2s,
+      transform 0.2s;
+  }
+
+  .post-card:hover {
+    border-color: #444;
+    transform: translateY(-2px);
+  }
+
+  .post-image {
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+  }
+
+  .post-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+  }
+
+  .post-card:hover .post-image img {
+    transform: scale(1.05);
+  }
+
+  .post-content {
+    padding: 1.5rem;
+  }
+
+  time {
+    font-size: 0.875rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    margin: 0.5rem 0;
+    line-height: 1.3;
+  }
+
+  h2 a {
+    color: #fff;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  h2 a:hover {
+    color: #4444ff;
+  }
+
+  .excerpt {
+    color: #888;
+    margin-top: 0.75rem;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    background: #222;
+    border-radius: 9999px;
+    color: #888;
+  }
+
+  .author {
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: #666;
+  }
+
+  .back-link {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #222;
+  }
+
+  .back-link a {
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .back-link a:hover {
+    color: #fff;
+  }
+</style>
