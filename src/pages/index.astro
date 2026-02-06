@@ -1,18 +1,40 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import Layout from "../layouts/Layout.astro";
+import { getLandingPage } from "../lib/contentful-api";
+
+// Fetch editable page content from Contentful
+const pageContent = await getLandingPage();
+
+// Fallback values if Contentful content not available
+const title = pageContent?.title || "Welcome";
+const subtitle = pageContent?.subtitle || "Astro + GSAP + Three.js Starter";
 ---
 
-<Layout title="Astro + GSAP + Three.js">
+<Layout title={pageContent?.metaDescription || "Astro + GSAP + Three.js"}>
   <main>
     <div id="three-container"></div>
-    
+
     <div class="content">
-      <h1 class="title">Welcome</h1>
-      <p class="subtitle">Astro + GSAP + Three.js Starter</p>
-      
+      <h1 class="title">{title}</h1>
+      <p class="subtitle">{subtitle}</p>
+
       <svg class="logo" viewBox="0 0 100 100" width="120" height="120">
-        <circle class="circle" cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="2" />
-        <path class="path" d="M30 50 L45 65 L70 35" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+        <circle
+          class="circle"
+          cx="50"
+          cy="50"
+          r="45"
+          fill="none"
+          stroke="#fff"
+          stroke-width="2"></circle>
+        <path
+          class="path"
+          d="M30 50 L45 65 L70 35"
+          fill="none"
+          stroke="#fff"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"></path>
       </svg>
     </div>
   </main>
@@ -21,7 +43,7 @@ import Layout from '../layouts/Layout.astro';
 <style>
   main {
     width: 100%;
-    height: 100vh;
+    height: calc(100vh - 73px); /* Account for fixed header */
     position: relative;
     overflow: hidden;
   }
@@ -33,6 +55,12 @@ import Layout from '../layouts/Layout.astro';
     width: 100%;
     height: 100%;
     z-index: 0;
+  }
+
+  @media (max-width: 640px) {
+    main {
+      height: calc(100vh - 65px);
+    }
   }
 
   .content {
@@ -73,25 +101,30 @@ import Layout from '../layouts/Layout.astro';
 </style>
 
 <script>
-  import { gsap } from 'gsap';
-  import * as THREE from 'three';
+  import { gsap } from "gsap";
+  import * as THREE from "three";
 
   // Three.js setup
-  const container = document.getElementById('three-container');
+  const container = document.getElementById("three-container");
   if (container) {
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    
+
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
     // Create a simple geometry
     const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
-    const material = new THREE.MeshBasicMaterial({ 
+    const material = new THREE.MeshBasicMaterial({
       color: 0x4444ff,
-      wireframe: true 
+      wireframe: true,
     });
     const torusKnot = new THREE.Mesh(geometry, material);
     scene.add(torusKnot);
@@ -108,7 +141,7 @@ import Layout from '../layouts/Layout.astro';
     animate();
 
     // Handle resize
-    window.addEventListener('resize', () => {
+    window.addEventListener("resize", () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -116,21 +149,25 @@ import Layout from '../layouts/Layout.astro';
   }
 
   // SVG path animation helper (mimics DrawSVG functionality)
-  function animateSVGPath(selector: string, duration: number, delay: number = 0) {
+  function animateSVGPath(
+    selector: string,
+    duration: number,
+    delay: number = 0
+  ) {
     const el = document.querySelector(selector) as SVGGeometryElement | null;
     if (el) {
       const length = el.getTotalLength();
       gsap.set(el, { strokeDasharray: length, strokeDashoffset: length });
-      gsap.to(el, { strokeDashoffset: 0, duration, delay, ease: 'power2.out' });
+      gsap.to(el, { strokeDashoffset: 0, duration, delay, ease: "power2.out" });
     }
   }
 
   // GSAP animations
-  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-  tl.to('.title', { opacity: 1, y: 0, duration: 1, delay: 0.3 })
-    .to('.subtitle', { opacity: 1, y: 0, duration: 0.8 }, '-=0.5')
-    .to('.logo', { opacity: 1, duration: 0.5 }, '-=0.3')
-    .call(() => animateSVGPath('.circle', 1), [], '-=0.3')
-    .call(() => animateSVGPath('.path', 0.6), [], '-=0.3');
+  tl.to(".title", { opacity: 1, y: 0, duration: 1, delay: 0.3 })
+    .to(".subtitle", { opacity: 1, y: 0, duration: 0.8 }, "-=0.5")
+    .to(".logo", { opacity: 1, duration: 0.5 }, "-=0.3")
+    .call(() => animateSVGPath(".circle", 1), [], "-=0.3")
+    .call(() => animateSVGPath(".path", 0.6), [], "-=0.3");
 </script>

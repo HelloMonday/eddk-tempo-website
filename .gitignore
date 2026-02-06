@@ -1,1 +1,20 @@
-node_modules
+# Dependencies
+node_modules/
+
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+.dist/
+.vercel/
+*.swp
+*~
+
+# Other
+.vscode/
+.idea/
+.DS_Store
