@@ -11,7 +11,7 @@ Astro website with GSAP, Three.js, and Contentful CMS integration.
 
 2. **Configure Contentful**
 
-   Update `.env` with your Contentful credentials:
+   Copy `.env.example` to `.env` and update with your Contentful credentials:
    ```env
    CONTENTFUL_SPACE_ID=your_space_id
    CONTENTFUL_ACCESS_TOKEN=your_delivery_api_token
@@ -92,7 +92,39 @@ CONTENTFUL_CMA_TOKEN=your_cma_token npm run seed
 npm run dev
 ```
 
-Open [http://localhost:4321](http://localhost:4321). Static files output to `dist/` on build.
+Open [http://localhost:4321](http://localhost:4321).
+
+## Deployment
+
+### Deploy to Vercel
+
+1. **Push your code to GitHub** (or GitLab/Bitbucket)
+
+2. **Import project to Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Click "New Project"
+   - Import your repository
+
+3. **Configure environment variables**
+
+   Add the following environment variables in Vercel project settings:
+   - `CONTENTFUL_SPACE_ID`
+   - `CONTENTFUL_ACCESS_TOKEN`
+   - `CONTENTFUL_PREVIEW_TOKEN` (optional)
+   - `CONTENTFUL_ENVIRONMENT`
+   - `CONTENTFUL_CMA_TOKEN` (only if using seed scripts in production)
+
+4. **Deploy**
+
+   Vercel will automatically detect the Astro project and configure build settings:
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `.vercel/output`
+   - **Install Command:** `npm install`
+
+The site uses static generation (SSG) - all pages are pre-rendered at build time with content from Contentful. To update content, trigger a new build via:
+   - Vercel dashboard rebuild
+   - Git push
+   - Contentful webhook (recommended - auto-rebuild on content changes)
 
 ## Content Models
 
